@@ -2,6 +2,7 @@
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
 #include "traverse.h"
+#include "traverse-json.h"
 #include <iostream>
 
 struct Point {
@@ -72,4 +73,9 @@ int main() {
   visit(reader2, polygon3);
   visit(writer, polygon3);
   std::cout << std::endl;
+
+  picojson::value json;
+  traverse::JsonWriter jsonwriter{json};
+  visit(jsonwriter, polygon);
+  std::cout << json.serialize() << std::endl;
 }
