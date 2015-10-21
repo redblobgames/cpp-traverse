@@ -1,5 +1,53 @@
 This is a project where I try out networking libraries with Emscripten. The goal is to make a minimal client-server game.
 
+** Serialization
+
+The serialization library ("traverse") defines generic traversal over a data structure with vectors, strings, numbers, and user-defined structs. The data structure is meant to be a value type (assignable, copyable) with a default constructor.
+
+There are two axes for extension:
+
+| Visitor \\ Type    | number | string | vector | struct1 | struct2 ... |
+|--------------------+--------+--------+--------+---------+-------------|
+| Debug output       |        |        |        |         |             |
+| Binary serialize   |        |        |        |         |             |
+| Binary deserialize |        |        |        |         |             |
+| JSON serialize     |        |        |        |         |             |
+| JSON deserialize   |        |        |        |         |             |
+| GUI output         |        |        |        |         |             |
+| ...                |        |        |        |         |             |
+
+I don't want to define every one of these. Instead, this library requires the number, string, and vector to be defined for each visitor (but not for each struct), and the structs to be defined for each user defined struct (but not for each visitor).
+
+To use any of the visitors, construct one, then call the visit function:
+
+#+begin_src cpp
+traverse::BinarySerialize writer;
+visit(writer, yourobject);
+#+end_src
+
+To define traversal of a user-defined struct:
+
+#+begin_src cpp
+struct Point {
+    int x;
+    int y;
+};
+
+TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
+#+end_src
+
+** JSON serialization
+
+The JSON serialize and deserialize uses the [[https://github.com/kazuho/picojson][picojson]] library. The visitors convert /to and from picojson values/, not to and from JSON strings. The caller uses picojson to parse a JSON string into a picojson value, then a deserialization visitor to convert a picojson value into the data structure. In the other direction, the caller uses the serialization visitor to convert a data structure into a picojson value, then the picojson library can stringify that into a JSON string. See the top of traverse-json.h.
+
+To get the picojson library:
+
+#+begin_src sh
+git submodule init
+git submodule update
+#+end_src
+
+
 ** Libraries
 
 I'm using the [[https://github.com/kazuho/picojson][picojson]] library, licensed 2-clause BSD:

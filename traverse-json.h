@@ -60,7 +60,7 @@ namespace traverse {
     }
     
     template<typename T>
-    StructVisitor& operator ()(const char* label, T& value) {
+    StructVisitor& field(const char* label, T& value) {
       output[label] = picojson::value();
       JsonWriter field_writer{output[label]};
       visit(field_writer, value);
@@ -116,7 +116,7 @@ namespace traverse {
     }
     
     template<typename T>
-    StructVisitor& operator ()(const char* label, T& value) {
+    StructVisitor& field(const char* label, T& value) {
       std::string key(label);
       auto i = input.find(key);
       if (i == input.end()) {

@@ -8,15 +8,22 @@
 #include <sstream>
 #include <vector>
 
+#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(visitor) FIELDS ; } }
+#define FIELD(NAME) .field(#NAME, obj.NAME)
+
 namespace traverse {
 
   /* This is how user-defined structs are described to the system:
    * 
+   * TRAVERSE_STRUCT(MyUserType, FIELD(x) FIELD(y))
+   * 
+   * That macro turns into
+   *
    * template<typename Visitor>
    * void visit(Visitor& visitor, MyUserType& obj) {
    *   visit_struct(visitor)
-   *      ("x", obj.x)
-   *      ("y", obj.y);
+   *      .field("x", obj.x)
+   *      .field("y", obj.y);
    * }
    *
    * The visit_struct function constructs a local
@@ -30,7 +37,7 @@ namespace traverse {
   struct StructVisitor {
     Visitor& visitor;
     template<typename T>
-    StructVisitor& operator ()(const char* label, T& value) {
+    StructVisitor& field(const char* label, T& value) {
       visit(visitor, value);
       return *this;
     }
@@ -84,7 +91,7 @@ namespace traverse {
     }
     
     template<typename T>
-    StructVisitor& operator ()(const char* label, T& value) {
+    StructVisitor& field(const char* label, T& value) {
       if (!first) std::cout << ", ";
       first = false;
       std::cout << label << ':';

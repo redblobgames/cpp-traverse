@@ -16,28 +16,10 @@ struct LineSegment {
 struct Polygon {
   std::vector<Point> points;
 };
-  
-namespace traverse {
-  template <typename Visitor>
-  void visit(Visitor& visitor, Point& value) {
-    visit_struct(visitor)
-      ("x", value.x)
-      ("y", value.y);
-  }
 
-  template <typename Visitor>
-  void visit(Visitor& visitor, LineSegment& value) {
-    visit_struct(visitor)
-      ("a", value.a)
-      ("b", value.b);
-  }
-
-  template <typename Visitor>
-  void visit(Visitor& visitor, Polygon& value) {
-    visit_struct(visitor)
-      ("points", value.points);
-  }
-}
+TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
+TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
+TRAVERSE_STRUCT(Polygon, FIELD(points))
 
 int main() {
   traverse::CoutWriter writer;
