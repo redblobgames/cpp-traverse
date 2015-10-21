@@ -8,24 +8,24 @@
 struct Point {
   int x, y;
 };
+TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 
 struct LineSegment {
   Point a, b;
 };
+TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
 struct Polygon {
+  std::string name;
   std::vector<Point> points;
 };
-
-TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
-TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
-TRAVERSE_STRUCT(Polygon, FIELD(points))
+TRAVERSE_STRUCT(Polygon, FIELD(name) FIELD(points))
 
 int main() {
   traverse::CoutWriter writer;
   Point p = {3, 5};
   LineSegment s = {{1, 7}, {13, 19}};
-  Polygon polygon = {{{3, 5}, {4, 6}, {5, 7}}};
+  Polygon polygon = {"UFO", {{3, 5}, {4, 6}, {5, 7}}};
   
   std::cout << "original data: " << std::endl;
   visit(writer, polygon);

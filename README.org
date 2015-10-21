@@ -36,6 +36,8 @@ struct Point {
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 #+end_src
 
+When deserializing, the library leaves data unchanged in the object if it does not have new data to place there. This mostly applies to the JSON deserializer. If the JSON object does not contain all the fields in the user struct, or if the types don't match, those fields will be left unchanged.
+
 ** JSON serialization
 
 The JSON serialize and deserialize uses the [[https://github.com/kazuho/picojson][picojson]] library. The visitors convert /to and from picojson values/, not to and from JSON strings. The caller uses picojson to parse a JSON string into a picojson value, then a deserialization visitor to convert a picojson value into the data structure. In the other direction, the caller uses the serialization visitor to convert a data structure into a picojson value, then the picojson library can stringify that into a JSON string. See the top of traverse-json.h.

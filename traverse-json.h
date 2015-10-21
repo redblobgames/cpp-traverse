@@ -38,6 +38,10 @@ namespace traverse {
     writer.out = std::move(picojson::value(double(value)));
   }
 
+  void visit(JsonWriter& writer, std::string& string) {
+    writer.out = std::move(picojson::value(string));
+  }
+  
   template<typename Element>
   void visit(JsonWriter& writer, std::vector<Element>& vector) {
     picojson::value::array output;
@@ -77,16 +81,24 @@ namespace traverse {
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(JsonReader& reader, T& value) {
     if (!reader.in.is<double>()) {
-      std::cerr << "JSON expected number" << std::endl;
+      std::cerr << "Warning: expected JSON number; skipping" << std::endl;
       return;
     }
     value = T(reader.in.get<double>());
   }
 
+  void visit(JsonReader& reader, std::string& string) {
+    if (!reader.in.is<std::string>()) {
+      std::cerr << "Warning: expected JSON string; skipping" << std::endl;
+      return;
+    }
+    string = reader.in.get<std::string>();
+  }
+
   template<typename Element>
   void visit(JsonReader& reader, std::vector<Element>& vector) {
     if (!reader.in.is<picojson::value::array>()) {
-      std::cerr << "JSON expected array" << std::endl;
+      std::cerr << "Warning: expected JSON array; skipping" << std::endl;
       return;
     }
     
@@ -109,7 +121,7 @@ namespace traverse {
         input(reader.in.get<picojson::value::object>())
     {
       if (!reader.in.is<picojson::value::object>()) {
-        std::cerr << "JSON expected object" << std::endl;
+        std::cerr << "Warning: expected JSON object; skipping" << std::endl;
       }
     }
     ~StructVisitor() {
@@ -120,7 +132,7 @@ namespace traverse {
       std::string key(label);
       auto i = input.find(key);
       if (i == input.end()) {
-        std::cerr << "JSON object missing field " << key << std::endl;
+        std::cerr << "Warning: JSON object missing field " << key << std::endl;
       } else {
         JsonReader field_reader{i->second};
         visit(field_reader, value);

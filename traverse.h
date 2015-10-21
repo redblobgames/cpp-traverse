@@ -7,6 +7,7 @@
 #include <iostream>
 #include <sstream>
 #include <vector>
+#include <string>
 
 #define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(visitor) FIELDS ; } }
 #define FIELD(NAME) .field(#NAME, obj.NAME)
@@ -67,6 +68,10 @@ namespace traverse {
     std::cout << value;
   }
 
+  void visit(CoutWriter& visitor, std::string& string) {
+    std::cout << '(' << string << ')';
+  }
+  
   template<typename Element>
   void visit(CoutWriter& visitor, std::vector<Element>& vector) {
     std::cout << '[';
@@ -104,7 +109,7 @@ namespace traverse {
 
 /* The binary serialize/deserialize uses a binary format and stringbufs */
 
-namespace traverse{
+namespace traverse {
 
   struct BinarySerialize {
     std::stringbuf out;
@@ -117,6 +122,12 @@ namespace traverse{
     writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
   }
 
+  void visit(BinarySerialize& writer, std::string& string) {
+    uint32_t size = string.size();
+    writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
+    writer.out.sputn(&string[0], size);
+  }
+  
   template<typename Element>
   void visit(BinarySerialize& writer, std::vector<Element>& vector) {
     uint32_t size = vector.size();
@@ -135,14 +146,34 @@ namespace traverse{
   template<class T> inline
   typename std::enable_if<std::is_integral<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
-    reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T));
+    if (reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T)) < sizeof(T)) {
+      std::cerr << "Error: not enough data in buffer to read number" << std::endl;
+    }
   }
 
+  void visit(BinaryDeserialize& reader, std::string& string) {
+    uint32_t size = 0;
+    if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
+      std::cerr << "Error: not enough data in buffer to read string size" << std::endl;
+      return;
+    }
+    if (reader.in.in_avail() < size) {
+      std::cerr << "Error: not enough data in buffer to deserialize string" << std::endl;
+      return;
+    }
+    string.resize(size);
+    reader.in.sgetn(&string[0], size);
+  }
+  
   template<typename Element>
   void visit(BinaryDeserialize& reader, std::vector<Element>& vector) {
-    uint32_t size = vector.size();
-    reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size));
+    uint32_t size = 0;
+    if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
+      std::cerr << "Error: not enough data in buffer to read vector size" << std::endl;
+      return;
+    }
     uint32_t i = 0;
+    vector.clear();
     for (; i < size && reader.in.in_avail() > 0; ++i) {
       Element element;
       visit(reader, element);
