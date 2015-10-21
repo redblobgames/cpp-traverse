@@ -74,8 +74,22 @@ int main() {
   visit(writer, polygon3);
   std::cout << std::endl;
 
-  picojson::value json;
-  traverse::JsonWriter jsonwriter{json};
+  std::cout << "write polygon to json:" << std::endl;
+  picojson::value json1;
+  traverse::JsonWriter jsonwriter{json1};
   visit(jsonwriter, polygon);
-  std::cout << json.serialize() << std::endl;
+  std::cout << json1.serialize() << std::endl;
+
+  std::cout << "parse json into picojson object:" << std::endl;
+  picojson::value json2;
+  auto err = picojson::parse(json2, "{\"points\":[{\"UNUSED\":0,\"x\":3,\"y\":5},{\"y\":6,\"x\":4},{\"y\":7},{\"x\":\"WRONGTYPE\"}]}");
+  if (!err.empty()) { std::cout << "JSON error " << err << std::endl; }
+  else { std::cout << "(success)" << std::endl; }
+  
+  std::cout << "read back from json into polygon:" << std::endl;
+  traverse::JsonReader jsonreader{json2};
+  Polygon polygon4;
+  visit(jsonreader, polygon4);
+  visit(writer, polygon4);
+  std::cout << std::endl;
 }
