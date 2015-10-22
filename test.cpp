@@ -1,6 +1,10 @@
 // Copyright 2015 Red Blob Games <redblobgames@gmail.com>
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
+/* Compile with:
+   c++ -std=c++11 test.cpp && ./a.out
+ */
+
 #include "traverse.h"
 #include "traverse-json.h"
 #include <iostream>
@@ -27,6 +31,9 @@ struct Polygon {
   std::vector<Point> points;
 };
 TRAVERSE_STRUCT(Polygon, FIELD(name) FIELD(points))
+
+// This just tests that everything compiles; it's not a unit test that
+// makes sure things are correct.
 
 int main() {
   traverse::CoutWriter writer;
