@@ -20,7 +20,9 @@
  * picojson::value json;
  * auto err = picojson::parse(json, "json string");
  * if (!err.empty()) { throw "parse error"; }
- * traverse::JsonReader jsonreader{json};
+ * std::stringstream errors;
+ * traverse::JsonReader jsonreader{json, errors};
+ * if (!errors.empty()) { throw "read error"; }
  * visit(jsonreader, yourobject);
  *
  * TODO: wrapper around this code
@@ -75,13 +77,14 @@ namespace traverse {
 
   struct JsonReader {
     const picojson::value& in;
+    std::ostream& errors;
   };
 
   template<class T> inline
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(JsonReader& reader, T& value) {
     if (!reader.in.is<double>()) {
-      std::cerr << "Warning: expected JSON number; skipping" << std::endl;
+      reader.errors << "Warning: expected JSON number; skipping" << std::endl;
       return;
     }
     value = T(reader.in.get<double>());
@@ -89,7 +92,7 @@ namespace traverse {
 
   void visit(JsonReader& reader, std::string& string) {
     if (!reader.in.is<std::string>()) {
-      std::cerr << "Warning: expected JSON string; skipping" << std::endl;
+      reader.errors << "Warning: expected JSON string; skipping" << std::endl;
       return;
     }
     string = reader.in.get<std::string>();
@@ -98,7 +101,7 @@ namespace traverse {
   template<typename Element>
   void visit(JsonReader& reader, std::vector<Element>& vector) {
     if (!reader.in.is<picojson::value::array>()) {
-      std::cerr << "Warning: expected JSON array; skipping" << std::endl;
+      reader.errors << "Warning: expected JSON array; skipping" << std::endl;
       return;
     }
     
@@ -106,7 +109,7 @@ namespace traverse {
     vector.clear();
     for (auto json_element : array) {
       vector.push_back(Element());
-      JsonReader element_reader{json_element};
+      JsonReader element_reader{json_element, reader.errors};
       visit(element_reader, vector.back());
     }
   }
@@ -121,7 +124,7 @@ namespace traverse {
         input(reader.in.get<picojson::value::object>())
     {
       if (!reader.in.is<picojson::value::object>()) {
-        std::cerr << "Warning: expected JSON object; skipping" << std::endl;
+        reader.errors << "Warning: expected JSON object; skipping" << std::endl;
       }
     }
     ~StructVisitor() {
@@ -132,9 +135,9 @@ namespace traverse {
       std::string key(label);
       auto i = input.find(key);
       if (i == input.end()) {
-        std::cerr << "Warning: JSON object missing field " << key << std::endl;
+        reader.errors << "Warning: JSON object missing field " << key << std::endl;
       } else {
-        JsonReader field_reader{i->second};
+        JsonReader field_reader{i->second, reader.errors};
         visit(field_reader, value);
       }
       return *this;

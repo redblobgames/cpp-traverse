@@ -140,6 +140,7 @@ namespace traverse {
 
   struct BinaryDeserialize {
     std::stringbuf in;
+    std::stringstream errors;
     BinaryDeserialize(const std::string& str): in(str, std::ios_base::in) {}
   };
 
@@ -147,18 +148,18 @@ namespace traverse {
   typename std::enable_if<std::is_integral<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
     if (reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T)) < sizeof(T)) {
-      std::cerr << "Error: not enough data in buffer to read number" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read number" << std::endl;
     }
   }
 
   void visit(BinaryDeserialize& reader, std::string& string) {
     uint32_t size = 0;
     if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
-      std::cerr << "Error: not enough data in buffer to read string size" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read string size" << std::endl;
       return;
     }
     if (reader.in.in_avail() < size) {
-      std::cerr << "Error: not enough data in buffer to deserialize string" << std::endl;
+      reader.errors << "Error: not enough data in buffer to deserialize string" << std::endl;
       return;
     }
     string.resize(size);
@@ -169,7 +170,7 @@ namespace traverse {
   void visit(BinaryDeserialize& reader, std::vector<Element>& vector) {
     uint32_t size = 0;
     if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
-      std::cerr << "Error: not enough data in buffer to read vector size" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read vector size" << std::endl;
       return;
     }
     uint32_t i = 0;
@@ -180,7 +181,7 @@ namespace traverse {
       vector.push_back(std::move(element));
     }
     if (i != size) {
-      std::cerr << "Warning: expected " << size << " elements in vector but only found " << i << std::endl;
+      reader.errors << "Error: expected " << size << " elements in vector but only found " << i << std::endl;
     }
   }
 }

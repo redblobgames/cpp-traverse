@@ -5,16 +5,22 @@
 #include "traverse-json.h"
 #include <iostream>
 
+// Basic test of structs
 struct Point {
   int x, y;
 };
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 
+// Testing serialization of private fields (declare friend function)
 struct LineSegment {
+  LineSegment(Point a_, Point b_): a(a_), b(b_) {}
+private:
   Point a, b;
+  template <typename V> friend void traverse::visit(V&, LineSegment&);
 };
 TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
+// Testing strings and vectors
 struct Polygon {
   std::string name;
   std::vector<Point> points;
@@ -24,7 +30,7 @@ TRAVERSE_STRUCT(Polygon, FIELD(name) FIELD(points))
 int main() {
   traverse::CoutWriter writer;
   Point p = {3, 5};
-  LineSegment s = {{1, 7}, {13, 19}};
+  LineSegment s{{1, 7}, {13, 19}};
   Polygon polygon = {"UFO", {{3, 5}, {4, 6}, {5, 7}}};
   
   std::cout << "original data: " << std::endl;
@@ -46,6 +52,7 @@ int main() {
   visit(reader, polygon2);
   visit(writer, polygon2);
   std::cout << std::endl;
+  std::cout << "ERRORS? " << reader.errors.str() << std::endl;
 
   std::cout << "corrupting data: " << std::endl;
   msg = writer2.out.str();
@@ -55,12 +62,13 @@ int main() {
   visit(reader2, polygon3);
   visit(writer, polygon3);
   std::cout << std::endl;
+  std::cout << "ERRORS? " << reader2.errors.str() << std::endl;
 
   std::cout << "write polygon to json:" << std::endl;
   picojson::value json1;
   traverse::JsonWriter jsonwriter{json1};
   visit(jsonwriter, polygon);
-  std::cout << json1.serialize() << std::endl;
+  std::cout << json1.serialize(true) << std::endl;
 
   std::cout << "parse json into picojson object:" << std::endl;
   picojson::value json2;
@@ -69,9 +77,11 @@ int main() {
   else { std::cout << "(success)" << std::endl; }
   
   std::cout << "read back from json into polygon:" << std::endl;
-  traverse::JsonReader jsonreader{json2};
+  std::stringstream errors;
+  traverse::JsonReader jsonreader{json2, errors};
   Polygon polygon4;
   visit(jsonreader, polygon4);
   visit(writer, polygon4);
   std::cout << std::endl;
+  std::cout << "ERRORS? " << errors.str() << std::endl;
 }
