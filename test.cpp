@@ -17,6 +17,7 @@ struct LineSegment {
 private:
   Point a, b;
   template <typename V> friend void traverse::visit(V&, LineSegment&);
+  template <typename V> friend void traverse::visit(V&, const LineSegment&);
 };
 TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
@@ -29,10 +30,10 @@ TRAVERSE_STRUCT(Polygon, FIELD(name) FIELD(points))
 
 int main() {
   traverse::CoutWriter writer;
-  Point p = {3, 5};
-  LineSegment s{{1, 7}, {13, 19}};
-  Polygon polygon = {"UFO", {{3, 5}, {4, 6}, {5, 7}}};
-  
+  const Point p = {3, 5};
+  const LineSegment s{{1, 7}, {13, 19}};
+  const Polygon polygon = {"UFO", {{3, 5}, {4, 6}, {5, 7}}};
+
   std::cout << "original data: " << std::endl;
   visit(writer, polygon);
   std::cout << std::endl;

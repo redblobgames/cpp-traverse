@@ -9,7 +9,7 @@
 #include <vector>
 #include <string>
 
-#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(visitor) FIELDS ; } }
+#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(visitor) FIELDS ; } }
 #define FIELD(NAME) .field(#NAME, obj.NAME)
 
 namespace traverse {
@@ -27,11 +27,22 @@ namespace traverse {
    *      .field("y", obj.y);
    * }
    *
+   * as well as a const MyUserType& version.
+   *
    * The visit_struct function constructs a local
    * StructVisitor<Visitor> object, which is destroyed when the
    * struct's visit() function returns. Each visitor type can
    * specialize this as needed to keep local fields or do work in the
    * constructor and destructor.
+   *
+   * If some fields aren't public, declare the visit function to be a
+   * friend:
+   *
+   * template <typename V>
+   *    friend void traverse::visit(V&, MyUserType&);
+   * template <typename V>
+   *    friend void traverse::visit(V&, const MyUserType&);
+   *
    */
   
   template<typename Visitor>
@@ -64,16 +75,16 @@ namespace traverse {
 
   template<class T> inline
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
-  visit(CoutWriter& writer, T& value) {
+  visit(CoutWriter& writer, const T& value) {
     std::cout << value;
   }
 
-  void visit(CoutWriter& visitor, std::string& string) {
+  void visit(CoutWriter& visitor, const std::string& string) {
     std::cout << '(' << string << ')';
   }
   
   template<typename Element>
-  void visit(CoutWriter& visitor, std::vector<Element>& vector) {
+  void visit(CoutWriter& visitor, const std::vector<Element>& vector) {
     std::cout << '[';
     for (int i = 0; i < vector.size(); ++i) {
       if (i != 0) std::cout << ", ";
@@ -96,7 +107,7 @@ namespace traverse {
     }
     
     template<typename T>
-    StructVisitor& field(const char* label, T& value) {
+    StructVisitor& field(const char* label, const T& value) {
       if (!first) std::cout << ", ";
       first = false;
       std::cout << label << ':';
@@ -118,18 +129,18 @@ namespace traverse {
 
   template<class T> inline
   typename std::enable_if<std::is_integral<T>::value, void>::type
-  visit(BinarySerialize& writer, T& value) {
+  visit(BinarySerialize& writer, const T& value) {
     writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
   }
 
-  void visit(BinarySerialize& writer, std::string& string) {
+  void visit(BinarySerialize& writer, const std::string& string) {
     uint32_t size = string.size();
     writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
     writer.out.sputn(&string[0], size);
   }
   
   template<typename Element>
-  void visit(BinarySerialize& writer, std::vector<Element>& vector) {
+  void visit(BinarySerialize& writer, const std::vector<Element>& vector) {
     uint32_t size = vector.size();
     writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
     for (auto& element : vector) {

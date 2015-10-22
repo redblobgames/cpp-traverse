@@ -36,16 +36,16 @@ namespace traverse {
 
   template<class T> inline
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
-  visit(JsonWriter& writer, T& value) {
+  visit(JsonWriter& writer, const T& value) {
     writer.out = std::move(picojson::value(double(value)));
   }
 
-  void visit(JsonWriter& writer, std::string& string) {
+  void visit(JsonWriter& writer, const std::string& string) {
     writer.out = std::move(picojson::value(string));
   }
   
   template<typename Element>
-  void visit(JsonWriter& writer, std::vector<Element>& vector) {
+  void visit(JsonWriter& writer, const std::vector<Element>& vector) {
     picojson::value::array output;
     for (auto element : vector) {
       output.push_back(picojson::value());
@@ -66,7 +66,7 @@ namespace traverse {
     }
     
     template<typename T>
-    StructVisitor& field(const char* label, T& value) {
+    StructVisitor& field(const char* label, const T& value) {
       output[label] = picojson::value();
       JsonWriter field_writer{output[label]};
       visit(field_writer, value);
