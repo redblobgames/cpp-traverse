@@ -40,7 +40,7 @@ namespace traverse {
     writer.out = std::move(picojson::value(double(value)));
   }
 
-  void visit(JsonWriter& writer, const std::string& string) {
+  inline void visit(JsonWriter& writer, const std::string& string) {
     writer.out = std::move(picojson::value(string));
   }
   
@@ -90,7 +90,7 @@ namespace traverse {
     value = T(reader.in.get<double>());
   }
 
-  void visit(JsonReader& reader, std::string& string) {
+  inline void visit(JsonReader& reader, std::string& string) {
     if (!reader.in.is<std::string>()) {
       reader.errors << "Warning: expected JSON string; skipping" << std::endl;
       return;

@@ -92,7 +92,7 @@ namespace traverse {
     std::cout << int(value);
   }
 
-  void visit(CoutWriter& visitor, const std::string& string) {
+  inline void visit(CoutWriter& visitor, const std::string& string) {
     std::cout << '(' << string << ')';
   }
   
@@ -146,7 +146,7 @@ namespace traverse {
     writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
   }
 
-  void visit(BinarySerialize& writer, const std::string& string) {
+  inline void visit(BinarySerialize& writer, const std::string& string) {
     uint32_t size = string.size();
     writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
     writer.out.sputn(&string[0], size);
@@ -176,7 +176,7 @@ namespace traverse {
     }
   }
 
-  void visit(BinaryDeserialize& reader, std::string& string) {
+  inline void visit(BinaryDeserialize& reader, std::string& string) {
     uint32_t size = 0;
     if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
       reader.errors << "Error: not enough data in buffer to read string size" << std::endl;

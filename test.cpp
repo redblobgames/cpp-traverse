@@ -2,7 +2,7 @@
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
 /* Compile with:
-   c++ -std=c++11 test.cpp && ./a.out
+   c++ -std=c++11 test.cpp test-link.cpp && ./a.out
  */
 
 #include "traverse.h"
