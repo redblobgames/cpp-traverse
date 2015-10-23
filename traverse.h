@@ -64,6 +64,11 @@ namespace traverse {
    * it handles (primitives, strings, vectors) and optionally a
    * StructVisitor to handle the field name/value pairs in a struct.
    */
+
+  template<typename T>
+  struct is_enum_or_number
+    : std::integral_constant<bool, std::is_enum<T>::value || std::is_arithmetic<T>::value>
+  {};
 }
 
 
@@ -77,6 +82,14 @@ namespace traverse {
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
     std::cout << value;
+  }
+
+  template<class T> inline
+  typename std::enable_if<std::is_enum<T>::value, void>::type
+  visit(CoutWriter& writer, const T& value) {
+    // There's a << defined for C enums but not for C++11 enums, so
+    // convert to int:
+    std::cout << int(value);
   }
 
   void visit(CoutWriter& visitor, const std::string& string) {
@@ -128,7 +141,7 @@ namespace traverse {
   };
 
   template<class T> inline
-  typename std::enable_if<std::is_integral<T>::value, void>::type
+  typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
     writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
   }
@@ -156,7 +169,7 @@ namespace traverse {
   };
 
   template<class T> inline
-  typename std::enable_if<std::is_integral<T>::value, void>::type
+  typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
     if (reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T)) < sizeof(T)) {
       reader.errors << "Error: not enough data in buffer to read number" << std::endl;

@@ -25,12 +25,18 @@ private:
 };
 TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
-// Testing strings and vectors
+// Testing enums
+enum Color { RED, BLUE };
+enum class Mood { HAPPY, SAD, HULK_SMASH };
+
+// Testing strings, enums, vectors
 struct Polygon {
+  Color color;
+  Mood mood;
   std::string name;
   std::vector<Point> points;
 };
-TRAVERSE_STRUCT(Polygon, FIELD(name) FIELD(points))
+TRAVERSE_STRUCT(Polygon, FIELD(color) FIELD(mood) FIELD(name) FIELD(points))
 
 // This just tests that everything compiles; it's not a unit test that
 // makes sure things are correct.
@@ -39,12 +45,12 @@ int main() {
   traverse::CoutWriter writer;
   const Point p = {3, 5};
   const LineSegment s{{1, 7}, {13, 19}};
-  const Polygon polygon = {"UFO", {{3, 5}, {4, 6}, {5, 7}}};
-
+  const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO", {{3, 5}, {4, 6}, {5, 7}}};
+  
   std::cout << "original data: " << std::endl;
   visit(writer, polygon);
   std::cout << std::endl;
-
+  
   std::cout << "serialized to bytes: " << std::endl;
   traverse::BinarySerialize writer2;
   visit(writer2, polygon);

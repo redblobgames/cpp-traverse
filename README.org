@@ -2,7 +2,7 @@
 
 When using some serialization libraries I have to write code to traverse my data structures and then put each of my struct's fields into the format the serialization library wants, and then I have to do this again in reverse.
 
-This library reduces most of that boilerplate, but only for certain types of data structures. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
+This library reduces most of that boilerplate, but only for certain types of data structures. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, enums, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
 
 Since there are many different data structures and many different serialization/deserialization libraries, there are two axes for extension:
 
