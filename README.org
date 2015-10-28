@@ -32,25 +32,31 @@ git submodule update
 
 * Usage
 
-To use any of the visitors, construct one, then call the visit function:
+To use any of the visitors, construct one, then call the visit function. The error handling differs for each type of visitor. CoutWriter and BinarySerialize and JsonWriter don't report errors; BinaryDeserialize has an Errors() function; JsonReader takes an errors stream parameter that it writes to.
 
 #+begin_src cpp
 traverse::BinarySerialize writer;
 visit(writer, yourobject);
+
+traverse::BinaryDeserialize reader;
+visit(reader, yourobject)
+if (!reader.Errors().empty()) throw reader.Errors();
 #+end_src
 
 To define traversal of a user-defined struct:
 
 #+begin_src cpp
 struct Point {
-    int x;
-    int y;
+    int32_t x;
+    int32_t y;
 };
 
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 #+end_src
 
 If the fields aren't public, you will need to declare the visit functions as friends; see traverse.h for details.
+
+For portability, *use {uint,int}{8,16,32,64}_t types, not char, bool, int, long.* For enums, use C++11 enums that let you specify the size. *This library does not handle byte order differences.*
 
 ** Debug output
 

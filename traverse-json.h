@@ -34,7 +34,7 @@ namespace traverse {
     JsonWriter(picojson::value& out_): out(out_) {}
   };
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(JsonWriter& writer, const T& value) {
     writer.out = std::move(picojson::value(double(value)));
@@ -80,7 +80,7 @@ namespace traverse {
     std::ostream& errors;
   };
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(JsonReader& reader, T& value) {
     if (!reader.in.is<double>()) {

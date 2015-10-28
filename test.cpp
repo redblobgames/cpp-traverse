@@ -6,8 +6,12 @@
  */
 
 #include "traverse.h"
-#include "traverse-json.h"
 #include <iostream>
+
+#define TEST_JSON 1
+#if TEST_JSON
+#include "traverse-json.h"
+#endif
 
 // Basic test of structs
 struct Point {
@@ -47,55 +51,93 @@ int main() {
   const LineSegment s{{1, 7}, {13, 19}};
   const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO", {{3, 5}, {4, 6}, {5, 7}}};
   
-  std::cout << "original data: " << std::endl;
-  visit(writer, polygon);
-  std::cout << std::endl;
-  
-  std::cout << "serialized to bytes: " << std::endl;
-  traverse::BinarySerialize writer2;
-  visit(writer2, polygon);
-  std::string msg = writer2.out.str();
-  for (int i = 0; i < msg.size(); i++) {
-    std::cout << int(msg[i]) << ' ';
+  {
+    std::cout << "TEST original data: " << std::endl;
+    visit(writer, polygon);
+    std::cout << std::endl;
   }
-  std::cout << std::endl;
 
-  std::cout << "read back from bytes: " << std::endl;
-  traverse::BinaryDeserialize reader(msg);
-  Polygon polygon2;
-  visit(reader, polygon2);
-  visit(writer, polygon2);
-  std::cout << std::endl;
-  std::cout << "ERRORS? " << reader.errors.str() << std::endl;
-
-  std::cout << "corrupting data: " << std::endl;
-  msg = writer2.out.str();
-  msg[3] = 0x7f;
-  traverse::BinaryDeserialize reader2(msg);
-  Polygon polygon3;
-  visit(reader2, polygon3);
-  visit(writer, polygon3);
-  std::cout << std::endl;
-  std::cout << "ERRORS? " << reader2.errors.str() << std::endl;
-
-  std::cout << "write polygon to json:" << std::endl;
-  picojson::value json1;
-  traverse::JsonWriter jsonwriter{json1};
-  visit(jsonwriter, polygon);
-  std::cout << json1.serialize(true) << std::endl;
-
-  std::cout << "parse json into picojson object:" << std::endl;
-  picojson::value json2;
-  auto err = picojson::parse(json2, "{\"points\":[{\"UNUSED\":0,\"x\":3,\"y\":5},{\"y\":6,\"x\":4},{\"y\":7},{\"x\":\"WRONGTYPE\"}]}");
-  if (!err.empty()) { std::cout << "JSON error " << err << std::endl; }
-  else { std::cout << "(success)" << std::endl; }
+  traverse::BinarySerialize writer2;
+  {
+    std::cout << "TEST serialized to bytes: " << std::endl;
+    visit(writer2, polygon);
+    std::string msg = writer2.out.str();
+    for (int i = 0; i < msg.size(); i++) {
+      std::cout << int(msg[i]) << ' ';
+    }
+    std::cout << std::endl;
   
-  std::cout << "read back from json into polygon:" << std::endl;
-  std::stringstream errors;
-  traverse::JsonReader jsonreader{json2, errors};
-  Polygon polygon4;
-  visit(jsonreader, polygon4);
-  visit(writer, polygon4);
-  std::cout << std::endl;
-  std::cout << "ERRORS? " << errors.str() << std::endl;
+    std::cout << "TEST read back from bytes: " << std::endl;
+    traverse::BinaryDeserialize reader(msg);
+    Polygon polygon2;
+    visit(reader, polygon2);
+    visit(writer, polygon2);
+    std::cout << std::endl;
+    std::cout << "ERRORS? " << reader.Errors() << std::endl;
+  }
+
+  {
+    std::cout << "TEST corrupting data: " << std::endl;
+    std::string msg = writer2.out.str();
+    msg[3] = 0x7f;
+    traverse::BinaryDeserialize reader2(msg);
+    Polygon polygon3;
+    visit(reader2, polygon3);
+    visit(writer, polygon3);
+    std::cout << std::endl;
+    std::cout << "ERRORS? " << reader2.Errors() << std::endl;
+  }
+
+  {
+    std::cout << "TEST message too short" << std::endl;
+    std::string msg = writer2.out.str();
+    msg.erase(30);
+    traverse::BinaryDeserialize reader3(msg);
+    Polygon polygon4;
+    visit(reader3, polygon4);
+    visit(writer, polygon4);
+    std::cout << std::endl;
+    std::cout << "ERRORS? " << reader3.Errors() << std::endl;
+  }
+
+  {
+    std::cout << "TEST message too long" << std::endl;
+    std::string msg = writer2.out.str();
+    msg += "TRASH";
+    traverse::BinaryDeserialize reader3(msg);
+    Polygon polygon4;
+    visit(reader3, polygon4);
+    visit(writer, polygon4);
+    std::cout << std::endl;
+    std::cout << "ERRORS? " << reader3.Errors() << std::endl;
+  }
+  
+#if TEST_JSON
+  {
+    std::cout << "TEST write polygon to json:" << std::endl;
+    picojson::value json1;
+    traverse::JsonWriter jsonwriter{json1};
+    visit(jsonwriter, polygon);
+    std::cout << json1.serialize(true) << std::endl;
+  }
+
+  picojson::value json2;
+  {
+    std::cout << "TEST parse json into picojson object:" << std::endl;
+    auto err = picojson::parse(json2, "{\"points\":[{\"UNUSED\":0,\"x\":3,\"y\":5},{\"y\":6,\"x\":4},{\"y\":7},{\"x\":\"WRONGTYPE\"}]}");
+    if (!err.empty()) { std::cout << "JSON error " << err << std::endl; }
+    else { std::cout << "(success)" << std::endl; }
+  }
+
+  {
+    std::cout << "TEST read back from json into polygon:" << std::endl;
+    std::stringstream errors;
+    traverse::JsonReader jsonreader{json2, errors};
+    Polygon polygon5;
+    visit(jsonreader, polygon5);
+    visit(writer, polygon5);
+    std::cout << std::endl;
+    std::cout << "ERRORS? " << errors.str() << std::endl;
+  }
+#endif
 }

@@ -5,6 +5,7 @@
 #define TRAVERSE_H
 
 #include <iostream>
+#include <streambuf>
 #include <sstream>
 #include <vector>
 #include <string>
@@ -78,13 +79,13 @@ namespace traverse {
   struct CoutWriter {
   };
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
     std::cout << value;
   }
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<std::is_enum<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
     // There's a << defined for C enums but not for C++11 enums, so
@@ -131,7 +132,10 @@ namespace traverse {
 }
 
 
-/* The binary serialize/deserialize uses a binary format and stringbufs */
+/* The binary serialize/deserialize uses a binary format and
+ * stringbufs. Check deserializer.Errors() to see if anything went
+ * wrong. It will be empty on success.
+ */
 
 namespace traverse {
 
@@ -140,7 +144,7 @@ namespace traverse {
     BinarySerialize(): out(std::ios_base::out) {}
   };
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
     writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
@@ -166,9 +170,16 @@ namespace traverse {
     std::stringbuf in;
     std::stringstream errors;
     BinaryDeserialize(const std::string& str): in(str, std::ios_base::in) {}
+    std::string Errors() {
+      if (in.in_avail() != 0) {
+        errors << "Error: " << in.in_avail() << " extra bytes in message" << std::endl;
+        in.pubseekoff(0, std::ios_base::end); // so we don't write error again
+      }
+      return errors.str();
+    }
   };
 
-  template<class T> inline
+  template<typename T> inline
   typename std::enable_if<is_enum_or_number<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
     if (reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T)) < sizeof(T)) {
