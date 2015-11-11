@@ -2,7 +2,7 @@
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
 /* Compile with:
-   c++ -std=c++11 test.cpp test-link.cpp && ./a.out
+   c++ -std=c++14 test.cpp test-link.cpp && ./a.out
  */
 
 #include "traverse.h"
@@ -49,12 +49,10 @@ int main() {
   traverse::CoutWriter writer;
   const Point p = {3, 5};
   const LineSegment s{{1, 7}, {13, 19}};
-  const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO", {{3, 5}, {4, 6}, {5, 7}}};
+  const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
   
   {
-    std::cout << "TEST original data: " << std::endl;
-    visit(writer, polygon);
-    std::cout << std::endl;
+    std::cout << "TEST original data: " << polygon << std::endl;
   }
 
   traverse::BinarySerialize writer2;

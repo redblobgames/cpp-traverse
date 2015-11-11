@@ -57,10 +57,12 @@ namespace traverse {
 
   template<>
   struct StructVisitor<JsonWriter> {
+    const char* name;
     JsonWriter& writer;
     picojson::value::object output;
     
-    StructVisitor(JsonWriter& writer_): writer(writer_) {}
+    StructVisitor(const char* name_, JsonWriter& writer_)
+      : name(name_), writer(writer_) {}
     ~StructVisitor() {
       writer.out = std::move(picojson::value(output));
     }
@@ -116,11 +118,13 @@ namespace traverse {
 
   template<>
   struct StructVisitor<JsonReader> {
+    const char* name;
     JsonReader& reader;
     const picojson::value::object& input;
     
-    StructVisitor(JsonReader& reader_)
-      : reader(reader_),
+    StructVisitor(const char* name_, JsonReader& reader_)
+      : name(name_),
+        reader(reader_),
         input(reader.in.get<picojson::value::object>())
     {
       if (!reader.in.is<picojson::value::object>()) {

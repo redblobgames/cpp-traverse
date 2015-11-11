@@ -5,12 +5,13 @@
 #define TRAVERSE_H
 
 #include <iostream>
+#include <iomanip>
 #include <streambuf>
 #include <sstream>
 #include <vector>
 #include <string>
 
-#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(visitor) FIELDS ; } }
+#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } } inline std::ostream& operator << (std::ostream& out, const TYPE& obj) { traverse::CoutWriter writer(out); visit(writer, obj); return out; }
 #define FIELD(NAME) .field(#NAME, obj.NAME)
 
 namespace traverse {
@@ -23,7 +24,7 @@ namespace traverse {
    *
    * template<typename Visitor>
    * void visit(Visitor& visitor, MyUserType& obj) {
-   *   visit_struct(visitor)
+   *   visit_struct("MyUserType", visitor)
    *      .field("x", obj.x)
    *      .field("y", obj.y);
    * }
@@ -48,6 +49,7 @@ namespace traverse {
   
   template<typename Visitor>
   struct StructVisitor {
+    const char* name;
     Visitor& visitor;
     template<typename T>
     StructVisitor& field(const char* label, T& value) {
@@ -57,8 +59,8 @@ namespace traverse {
   };
   
   template<typename Visitor>
-  StructVisitor<Visitor> visit_struct(Visitor& visitor) {
-    return StructVisitor<Visitor>{visitor};
+  StructVisitor<Visitor> visit_struct(const char* name, Visitor& visitor) {
+    return StructVisitor<Visitor>{name, visitor};
   }
 
   /* Each visitor type needs visit() functions for the standard types
@@ -77,12 +79,14 @@ namespace traverse {
 
 namespace traverse {
   struct CoutWriter {
+    std::ostream& out;
+    CoutWriter(std::ostream& out_ = std::cout) : out(out_) {}
   };
 
   template<typename T> inline
   typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
-    std::cout << value;
+    writer.out << value;
   }
 
   template<typename T> inline
@@ -90,42 +94,48 @@ namespace traverse {
   visit(CoutWriter& writer, const T& value) {
     // There's a << defined for C enums but not for C++11 enums, so
     // convert to int:
-    std::cout << int(value);
+    writer.out << int(value);
   }
 
-  inline void visit(CoutWriter& visitor, const std::string& string) {
-    std::cout << '(' << string << ')';
+  inline void visit(CoutWriter& writer, const std::string& string) {
+#if __cplusplus >= 201400L
+    writer.out << std::quoted(string);
+#else
+    writer.out << '"' << string << '"';
+#endif
   }
   
   template<typename Element>
-  void visit(CoutWriter& visitor, const std::vector<Element>& vector) {
-    std::cout << '[';
+  void visit(CoutWriter& writer, const std::vector<Element>& vector) {
+    writer.out << '[';
     for (int i = 0; i < vector.size(); ++i) {
-      if (i != 0) std::cout << ", ";
-      visit(visitor, vector[i]);
+      if (i != 0) writer.out << ", ";
+      visit(writer, vector[i]);
     }
-    std::cout << ']';
+    writer.out << ']';
   }
 
   template<>
   struct StructVisitor<CoutWriter> {
-    CoutWriter& visitor;
+    const char* name;
+    CoutWriter& writer;
     bool first;
     
-    StructVisitor(CoutWriter& visitor_): visitor(visitor_), first(true) {
-      std::cout << '{';
+    StructVisitor(const char* name_, CoutWriter& writer_)
+      : name(name_), writer(writer_), first(true) {
+      writer.out << name << '{';
     }
 
     ~StructVisitor() {
-      std::cout << '}';
+      writer.out << '}';
     }
     
     template<typename T>
     StructVisitor& field(const char* label, const T& value) {
-      if (!first) std::cout << ", ";
+      if (!first) writer.out << ", ";
       first = false;
-      std::cout << label << ':';
-      visit(visitor, value);
+      writer.out << label << ':';
+      visit(writer, value);
       return *this;
     }
   };
