@@ -31,8 +31,7 @@ struct LineSegment {
   LineSegment(Point a_, Point b_): a(a_), b(b_) {}
 private:
   Point a, b;
-  template <typename V> friend void traverse::visit(V&, LineSegment&);
-  template <typename V> friend void traverse::visit(V&, const LineSegment&);
+  TRAVERSE_IS_FRIEND(LineSegment)
 };
 TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 

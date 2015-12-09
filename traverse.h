@@ -13,6 +13,7 @@
 
 #define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } } inline std::ostream& operator << (std::ostream& out, const TYPE& obj) { traverse::CoutWriter writer(out); visit(writer, obj); return out; }
 #define FIELD(NAME) .field(#NAME, obj.NAME)
+#define TRAVERSE_IS_FRIEND(TYPE) template <typename V> friend void traverse::visit(V&, TYPE&); template <typename V> friend void traverse::visit(V&, const TYPE&);
 
 namespace traverse {
 
@@ -37,9 +38,12 @@ namespace traverse {
    * specialize this as needed to keep local fields or do work in the
    * constructor and destructor.
    *
-   * If some fields aren't public, declare the visit function to be a
-   * friend:
+   * If some fields aren't public, put this inside your class:
+   * 
+   * TRAVERSE_IS_FRIEND(MyUserType)
    *
+   * That macro turns into
+   * 
    * template <typename V>
    *    friend void traverse::visit(V&, MyUserType&);
    * template <typename V>
