@@ -145,6 +145,70 @@ namespace traverse {
   };
 }
 
+/* Variable length integer encoding, used for binary serialization:
+ *
+ * Unsigned integers: each byte contains the lowest 7 bits of data and
+ * 1 bit for "continue". If the continue bit is set, there's more
+ * data. The last byte will have 0 in its continue bit. Examples:
+ *
+ * 0b111 ==> 0:0000111
+ * 0b1111111100000000 ==> 1:0000000 1:1111110 0:0000011
+ *
+ * Signed integers: transform the number into an unsigned integer.
+ *    - Positive integers X become X:0 (e.g. X << 1)
+ *    - Negative integers X become (-X-1):1
+ * Every signed integer has a unique unsigned representation this way.
+ * No bits are wasted, and every signed integer can be represented.
+ * NOTE: I believe this is equivalent to Google's ZigZag format
+ * <https://developers.google.com/protocol-buffers/docs/encoding?hl=en#signed-integers>
+ */
+
+namespace traverse {
+  
+  inline void write_unsigned_int(std::stringbuf& out, uint64_t value) {
+    do {
+      uint8_t c = value & 0x7f;
+      value >>= 7;
+      if (value) c |= 0x80;
+      out.sputc(c);
+    } while(value);
+  }
+
+  inline bool read_unsigned_int(std::stringbuf& in, uint64_t& value) {
+    uint64_t result = 0;
+    for (int byte = 0; ; ++byte) {
+      int c = in.sbumpc();
+      if (c < 0) {
+        return false;
+      }
+      bool endbit = (c & 0x80) == 0;
+      result |= uint64_t(c & 0x7f) << (byte * 7);
+      if (endbit) {
+        value = result;
+        return true;
+      }
+    }
+  }
+
+  inline void write_signed_int(std::stringbuf& out, int64_t value) {
+    write_unsigned_int(out,
+                       (value < 0)
+                       ? (((-value-1) << 1) | 1)
+                       : (value << 1));
+  }
+
+  inline bool read_signed_int(std::stringbuf& in, int64_t& value) {
+    uint64_t decoded;
+    bool status = read_unsigned_int(in, decoded);
+    if (decoded & 1) {
+      value = -(decoded >> 1)-1;
+    } else {
+      value = decoded >> 1;
+    }
+    return status;
+  }
+  
+}
 
 /* The binary serialize/deserialize uses a binary format and
  * stringbufs. Check deserializer.Errors() to see if anything went
@@ -159,21 +223,28 @@ namespace traverse {
   };
 
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value, void>::type
+  typename std::enable_if<is_enum_or_number<T>::value && !std::is_signed<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
-    writer.out.sputn(reinterpret_cast<const char *>(&value), sizeof(T));
+    uint64_t wide_value = uint64_t(value);
+    write_unsigned_int(writer.out, wide_value);
+  }
+
+  template<typename T> inline
+  typename std::enable_if<is_enum_or_number<T>::value && std::is_signed<T>::value, void>::type
+  visit(BinarySerialize& writer, const T& value) {
+    write_signed_int(writer.out, value);
   }
 
   inline void visit(BinarySerialize& writer, const std::string& string) {
-    uint32_t size = string.size();
-    writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
+    uint64_t size = string.size();
+    write_unsigned_int(writer.out, size);
     writer.out.sputn(&string[0], size);
   }
   
   template<typename Element>
   void visit(BinarySerialize& writer, const std::vector<Element>& vector) {
-    uint32_t size = vector.size();
-    writer.out.sputn(reinterpret_cast<const char*>(&size), sizeof(size));
+    uint64_t size = vector.size();
+    write_unsigned_int(writer.out, size);
     for (auto& element : vector) {
       visit(writer, element);
     }
@@ -192,18 +263,30 @@ namespace traverse {
       return errors.str();
     }
   };
-
+ 
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value, void>::type
+  typename std::enable_if<is_enum_or_number<T>::value && !std::is_signed<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
-    if (reader.in.sgetn(reinterpret_cast<char *>(&value), sizeof(T)) < sizeof(T)) {
+    uint64_t wide_value;
+    if (!read_unsigned_int(reader.in, wide_value)) {
       reader.errors << "Error: not enough data in buffer to read number" << std::endl;
     }
+    value = T(wide_value);
+  }
+    
+  template<typename T> inline
+  typename std::enable_if<is_enum_or_number<T>::value && std::is_signed<T>::value, void>::type
+  visit(BinaryDeserialize& reader, T& value) {
+    int64_t wide_value;
+    if (!read_signed_int(reader.in, wide_value)) {
+      reader.errors << "Error: not enough data in buffer to read number" << std::endl;
+    }
+    value = T(wide_value);
   }
 
   inline void visit(BinaryDeserialize& reader, std::string& string) {
-    uint32_t size = 0;
-    if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
+    uint64_t size = 0;
+    if (!read_unsigned_int(reader.in, size)) {
       reader.errors << "Error: not enough data in buffer to read string size" << std::endl;
       return;
     }
@@ -217,12 +300,11 @@ namespace traverse {
   
   template<typename Element>
   void visit(BinaryDeserialize& reader, std::vector<Element>& vector) {
-    uint32_t size = 0;
-    if (reader.in.sgetn(reinterpret_cast<char*>(&size), sizeof(size)) < sizeof(size)) {
+    uint64_t i = 0, size = 0;
+    if (!read_unsigned_int(reader.in, size)) {
       reader.errors << "Error: not enough data in buffer to read vector size" << std::endl;
       return;
     }
-    uint32_t i = 0;
     vector.clear();
     for (; i < size && reader.in.in_avail() > 0; ++i) {
       Element element;

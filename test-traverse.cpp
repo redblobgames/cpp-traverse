@@ -3,22 +3,13 @@
 
 #include "traverse.h"
 #include <iostream>
+#include "test.h"
 
-template <typename A, typename B>
-void _test_equal(const A& a, const B& b, const char* file, int line) {
-  if (a != b) {
-    std::cerr << " * FAIL " << file << ':' << line << ": (" << a << ") != (" << b << ")" << std::endl;
-  } else {
-    std::cerr << "   PASS " << file << ':' << line << ": (" << a << ")" << std::endl;
-  }
-}
-#define TEST_EQ(a, b) _test_equal(a, b, __FILE__, __LINE__)
-
-
-#define TEST_JSON 1
+#define TEST_JSON 0
 #if TEST_JSON
 #include "traverse-json.h"
 #endif
+
 
 // Basic test of structs
 struct Point {
@@ -48,8 +39,6 @@ struct Polygon {
 };
 TRAVERSE_STRUCT(Polygon, FIELD(color) FIELD(mood) FIELD(name) FIELD(points))
 
-// This just tests that everything compiles; it's not a unit test that
-// makes sure things are correct.
 
 int main() {
   traverse::CoutWriter writer;
@@ -74,7 +63,7 @@ int main() {
     for (int i = 0; i < msg.size(); i++) {
       out << int(msg[i]) << ' ';
     }
-    TEST_EQ(out.str(), "1 0 0 0 2 0 0 0 9 0 0 0 85 70 79 34 49 57 52 50 34 3 0 0 0 3 0 0 0 5 0 0 0 4 0 0 0 6 0 0 0 5 0 0 0 7 0 0 0 ");
+    TEST_EQ(out.str(), "1 2 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
 
     std::cout << "__ Deserialize from bytes __ " << std::endl;
     std::stringstream out1, out2;
@@ -90,7 +79,9 @@ int main() {
   {
     std::cout << "__ Corrupt deserialize __ " << std::endl;
     std::string msg = serialize.out.str();
-    msg[11] = 0x7f;
+    for (int i = 0; i < msg.size(); i++) {
+      msg[i] = 0x7f;
+    }
     traverse::BinaryDeserialize reader(msg);
     Polygon polygon2;
     visit(reader, polygon2);
@@ -100,7 +91,7 @@ int main() {
   {
     std::cout << "__ Serialized message too short __ " << std::endl;
     std::string msg = serialize.out.str();
-    msg.erase(30);
+    msg.erase(msg.size()/2);
     traverse::BinaryDeserialize reader(msg);
     Polygon polygon2;
     visit(reader, polygon2);
