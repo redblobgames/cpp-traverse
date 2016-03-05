@@ -56,7 +56,11 @@ TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 
 If the fields aren't public, you will need to declare the visit functions as friends; see traverse.h for details.
 
-For portability, *use {uint,int}{8,16,32,64}_t types, not char, bool, int, long.* For enums, use C++11 enums that let you specify the size. *This library does not handle byte order differences.*
+For portability, use {uint,int}{8,16,32,64}_t types instead of char, bool, int, long. For enums, use C++11 enums that let you specify the size. The binary serialize/deserialize formats will handle size changes but other visitor classes may not.
+
+* Visitor types
+
+As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. These are the visitor types included with the library:
 
 ** Debug output
 
@@ -79,7 +83,114 @@ Any errors and warnings during deserialization are written to the =errors= strea
 
 ** Other serialization
 
-The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, JSON, or one of many other formats.
+The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, JSON, or one of many other formats. The only one of these I've tried is JSON, using picojson.
+
+** Other visitors
+
+I've used this library to visit the fields of data structures so that I can display them with the [[https://github.com/ocornut/imgui][dear imgui]] library. I haven't included that code here. Look at the existing visitors in traverse.h to see how to write a new one. You'll have to define how the visitor works with each data type (integers, strings, vectors, structs).
+
+* Data types
+
+As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. These are the data types included with the library:
+
+** Signed, unsigned integers
+
+For binary serialization, integers are encoded using Google's ZigZag format (from Google Protocol Buffers). It handles big/little endian, changes in size (e.g. network server is 64 bit but client is 32 bit), and also encodes pretty compactly. For JSON, integers are written as JSON numbers; the library doesn't handle overflow.
+
+** std::string
+
+For binary serialization, strings are written as a size followed by the data. For JSON, strings are written as JSON strings.
+
+** std::vector
+
+For binary serialization, vectors are written as a size followed by serializing each element. For JSON, vectors are written as JSON arrays.
+
+** User-defined structs
+
+Use the =TRAVERSE_STRUCT= macro to define the visitor for a user-defined struct or class. For example: =TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))= will visit the =x= and =y= fields of the =Point= class. If the fields aren't public, you need to make the visitor a friend. Put =TRAVERSE_IS_FRIEND(MyUserType)= inside your class =MyUserType= to declare the friend functions.
+
+For binary serialization, structs are written by serializing each field. For JSON, structs are written as JSON objects.
+
+** Variant data types
+
+For passing messages over a network or through an external message queue, I've used the [[https://github.com/mapbox/variant][mapbox variant]] library, which is similar to boost::variant. Instead of sending /many/ types of messages =A=, =B=, =C= over the network, I send /one/ type, =variant<A,B,C>=. The variant keeps track of which type the message is.
+
+This keeps the system simpler. I don't need serialization to know about multiple types; it only knows about serializing one type. The variant class knows about multiple types but not about serialization.
+
+I can then make serialization work with variants by writing out the integer variant code, then the data:
+
+#+begin_src cpp
+namespace traverse {
+
+struct BinarySerializeVariantHelper {
+  BinarySerialize& writer;
+  template<typename T> void operator()(const T& value) {
+    visit(writer, value);
+  }
+};
+
+template<typename ...Variants>
+void visit(BinarySerialize& writer, 
+           const variant<Variants...>& value) {
+  uint8_t which = value.which();
+  visit(writer, which);
+  mapbox::util::apply_visitor(
+      BinarySerializeVariantHelper{writer}, 
+      value
+  );
+}
+
+}
+#+end_src
+
+I can make deserialization work with variants by iterating over the variant types and invoking deserialization when the variant code matches:
+
+#+begin_src cpp
+namespace traverse {
+
+template<typename VariantType>
+void deserialize_variant_helper(BinaryDeserialize& reader,
+                                uint8_t which, uint8_t index,
+                                VariantType&) {
+  reader.errors << "Error: tried to deserialize variant " << which
+                << " but there were only " << index << " types."
+                << std::endl;
+}
+
+template<typename VariantType, typename First, typename ...Rest>
+void deserialize_variant_helper(BinaryDeserialize& reader,
+                                uint8_t which, uint8_t index,
+                                VariantType& value) {
+  if (which == index) {
+    value.template set<First>();
+    visit(reader, value.template get<First>());
+  } else {
+    deserialize_variant_helper<VariantType, Rest...>(
+        reader, which, index+1, value);
+  }
+}
+  
+template<typename ...Variants>
+void visit(BinaryDeserialize& reader, 
+           variant<Variants...>& value) {
+  uint8_t which;
+  visit(reader, which);
+  deserialize_variant_helper<variant<Variants...>, Variants...>
+    (reader, which, 0, value);
+}
+
+}
+#+end_src
+
+This code is neither part of BinarySerialize/BinaryDeserialize nor part of mapbox variant. It's a small amount of glue code that makes these independent libraries work together.
+
+I didn't implement JSON serialization for variants.
+
+** Other data types
+
+You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at traverse.h to see how string and vector work, or look above to see how I defined serialize and deserialize for variant types.
+
+I didn't need float/double for my project so I didn't implement them.
 
 * Libraries
 

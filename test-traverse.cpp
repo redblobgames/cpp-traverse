@@ -77,6 +77,30 @@ int main() {
   }
 
   {
+    std::cout << "__ Integer size grew __" << std::endl;
+    int16_t narrow = -1563;
+    int64_t wide = 0xdeadbeefdeadbeef;
+    traverse::BinarySerialize s;
+    visit(s, narrow);
+    traverse::BinaryDeserialize u(s.out.str());
+    visit(u, wide);
+    TEST_EQ(narrow, wide);
+    TEST_EQ(u.Errors(), "");
+  }
+    
+  {
+    std::cout << "__ Integer size shrunk __" << std::endl;
+    uint64_t wide = 17291729;
+    uint16_t narrow = 0xdead;
+    traverse::BinarySerialize s;
+    visit(s, wide);
+    traverse::BinaryDeserialize u(s.out.str());
+    visit(u, narrow);
+    TEST_EQ(narrow, wide & 0xffff);
+    TEST_EQ(u.Errors(), "");
+  }
+    
+  {
     std::cout << "__ Corrupt deserialize __ " << std::endl;
     std::string msg = serialize.out.str();
     for (int i = 0; i < msg.size(); i++) {
