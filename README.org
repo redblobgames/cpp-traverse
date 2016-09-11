@@ -18,7 +18,7 @@ Two-axis extension can leave "holes" in the matrix. For example, if you add a ne
 
 * Installation
 
-This is a header-only library, but has optional extensions for JSON (via picojson), Lua, and mapbox::variant. To install the dependencies for the extensions:
+This is a header-only library, but has optional extensions for JSON (via [[https://github.com/kazuho/picojson][picojson]]), [[https://www.lua.org/manual/5.2/][Lua 5.2]], and [[https://github.com/mapbox/variant][mapbox::variant]]. To install the dependencies for the extensions:
 
 #+begin_src sh
 git submodule init
@@ -49,7 +49,7 @@ struct Point {
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 #+end_src
 
-If the fields aren't public, you will need to declare the visit functions as friends; see traverse.h for details.
+If the fields aren't public, you will need to declare the visit functions as friends; see [[file:traverse.h]] for details.
 
 * Visitor types
 
@@ -125,15 +125,15 @@ if (!errors.empty()) { throw "read error"; }
 // the value will be popped off the lua stack
 #+end_src
 
-As Lua is dynamically typed, and tables are used both as arrays and structs, there are several type mismatches that may occur when converting Lua to C++. See the `LuaReader` class in traverse-lua.h to control which type mismatches will be treated as errors and which will be ignored.
+As Lua is dynamically typed, and tables are used both as arrays and structs, there are several type mismatches that may occur when converting Lua to C++. See the =LuaReader= class in [[file:traverse-lua.h]] to control which type mismatches will be treated as errors and which will be ignored.
 
 It is expected that you will put a convenience wrapper around this.
 
-I have also included a Lua-to-string and string-to-Lua helper function (primarily for unit tests) in lua-util.h.
+I have also included a Lua-to-string function =lua_repr= and a string-to-Lua function =lua_eval= (primarily for unit tests) in [[file:lua-util.h]].
 
 ** Other visitors
 
-The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in traverse.h, traverse-json.h, traverse-lua.h to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
+The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in [[file:traverse.h]], [[file:traverse-json.h]], [[file:traverse-lua.h]] to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
 
 * Data types
 
@@ -149,15 +149,15 @@ For passing messages over a network or through an external message queue, I've u
 
 This keeps the system simpler. I don't need serialization to know about multiple types; it only knows about serializing one type. The variant class knows about multiple types but not about serialization.
 
-The code in traverse-variant.h will serialize a variant by first serializing the integer type code and then serializing the data. It will deserialize by first deserializaing the the type code, switching to that variant, then deserializing the data.
+The code in [[file:traverse-variant.h]] will serialize a variant by first serializing the integer type code and then serializing the data. It will deserialize by first deserializaing the the type code, switching to that variant, then deserializing the data.
 
 One of the downsides of two-axis extension is that there can be "holes" in the combinations of extensions. I did not define the variant+json or variant+lua combinations.
 
-I have a pattern matching convenience function in variant-util.h.
+I have a pattern matching convenience function in [[file:variant-util.h]].
 
 ** Other data types
 
-You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at traverse.h to see how string and vector work, or look above to see how I defined serialize and deserialize for variant types.
+You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at [[file:traverse.h]] to see how string and vector work, or [[file:traverse-variant.h]] to see how that data type extension works.
 
 I didn't need float/double binary serialization for my project so I didn't implement them, but the JSON and Lua extensions do handle floats/doubles.
 
