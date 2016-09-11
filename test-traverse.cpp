@@ -9,7 +9,6 @@
 
 int main() {
   traverse::CoutWriter writer;
-  const LineSegment s{{1, 7}, {13, 19}};
   const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
 
   std::cout << "__ Basic CoutWriter __" << std::endl;
@@ -26,7 +25,7 @@ int main() {
     std::cout << "__ Serialize to bytes __ " << std::endl;
     std::string msg = serialize.out.str();
     std::stringstream out;
-    for (int i = 0; i < msg.size(); i++) {
+    for (size_t i = 0; i < msg.size(); i++) {
       out << int(msg[i]) << ' ';
     }
     TEST_EQ(out.str(), "1 2 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
@@ -69,7 +68,7 @@ int main() {
   {
     std::cout << "__ Corrupt deserialize __ " << std::endl;
     std::string msg = serialize.out.str();
-    for (int i = 0; i < msg.size(); i++) {
+    for (size_t i = 0; i < msg.size(); i++) {
       msg[i] = 0x7f;
     }
     traverse::BinaryDeserialize reader(msg);

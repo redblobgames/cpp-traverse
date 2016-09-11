@@ -135,7 +135,7 @@ namespace traverse {
   template<typename Element>
   void visit(CoutWriter& writer, const std::vector<Element>& vector) {
     writer.out << '[';
-    for (int i = 0; i < vector.size(); ++i) {
+    for (size_t i = 0; i < vector.size(); ++i) {
       if (i != 0) writer.out << ", ";
       visit(writer, vector[i]);
     }
@@ -313,7 +313,7 @@ namespace traverse {
       reader.errors << "Error: not enough data in buffer to read string size" << std::endl;
       return;
     }
-    if (reader.in.in_avail() < size) {
+    if (uint64_t(reader.in.in_avail()) < size) {
       reader.errors << "Error: not enough data in buffer to deserialize string" << std::endl;
       return;
     }

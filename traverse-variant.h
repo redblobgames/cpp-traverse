@@ -74,7 +74,7 @@ namespace traverse {
       deserialize_variant_helper<VariantType, Rest...>(reader, which, index+1, value);
     }
   }
-    
+
   template<typename ...Variants>
   void visit(BinaryDeserialize& reader, variant<Variants...>& value) {
     unsigned which;

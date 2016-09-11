@@ -39,7 +39,7 @@ int main() {
     // the non-empty errors string.
     std::stringstream out;
     out << polygon2;
-    TEST_EQ(out.str(), "Polygon{color:0, mood:0, name:"", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:0, y:7}, Point{x:0, y:0}]}");
+    TEST_EQ(out.str(), "Polygon{color:0, mood:0, name:\"\", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:0, y:7}, Point{x:0, y:0}]}");
     TEST_EQ(errors.str().substr(0, 7), "Warning");
   }
 }
