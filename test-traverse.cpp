@@ -9,7 +9,6 @@
 
 int main() {
   traverse::CoutWriter writer;
-  const Point p = {3, 5};
   const LineSegment s{{1, 7}, {13, 19}};
   const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
 

@@ -174,8 +174,8 @@ namespace traverse {
  * 1 bit for "continue". If the continue bit is set, there's more
  * data. The last byte will have 0 in its continue bit. Examples:
  *
- * 0b111 ==> 0:0000111
- * 0b1111111100000000 ==> 1:0000000 1:1111110 0:0000011
+ * - 0b111 ==> 0:0000111
+ * - 0b1111111100000000 ==> 1:0000000 1:1111110 0:0000011
  *
  * Signed integers: transform the number into an unsigned integer.
  *   - Positive integers X become X:0 (e.g. X << 1)

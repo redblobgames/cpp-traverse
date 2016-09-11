@@ -2,19 +2,15 @@
 // https://github.com/redblobgames/cpp-traverse
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
-#ifndef TRAVERSE_JSON_H
-#define TRAVERSE_JSON_H
-
-#include "traverse.h"
-#include "picojson/picojson.h"
-
-/* Example usage for C++ to JSON:
+/**
+ * Traverse-JSON extension using the picojson library.
+ *
+ * Example usage for C++ to JSON:
  *
  *     picojson::value output;
  *     traverse::JsonWriter jsonwriter{output};
  *     visit(jsonwriter, yourobject);
  *     std::cout << output.serialize();
- *
  *
  * Example usage for JSON to C++:
  * 
@@ -26,9 +22,14 @@
  *     visit(jsonreader, yourobject);
  *     if (!errors.empty()) { throw "read error"; }
  *
- * It is expected that you will put a convenience wrapper
- * around this.
  */
+
+#ifndef TRAVERSE_JSON_H
+#define TRAVERSE_JSON_H
+
+#include "traverse.h"
+#include "picojson/picojson.h"
+
 namespace traverse {
 
   /** The JsonWriter will take a value from C++ and write it into

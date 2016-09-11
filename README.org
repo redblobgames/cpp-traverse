@@ -57,7 +57,7 @@ As described in the Motivation section, I want to be able to extend the set of v
 
 ** Debug output
 
-The =CoutWriter= writes everything to stdout.
+The =CoutWriter= writes everything to stdout. It might be useful to wrap this in a generic =operator <<(ostream&)= so that user-defined structs can be written to streams.
 
 ** Binary serialization
 
@@ -103,7 +103,7 @@ It is expected that you will put a convenience wrapper around this.
 
 ** Lua serialization
 
-The Lua extension uses the C-Lua API. The writer converts a C++ value into a Lua equivalent and pushes it onto the the Lua stack.
+The Lua extension uses the C-Lua API for Lua 5.2. The writer converts a C++ value into a Lua equivalent and pushes it onto the the Lua stack.
 
 #+begin_src cpp
 lua_State* L;
@@ -145,15 +145,15 @@ For binary serialization, structs are written by serializing each field. For JSO
 
 ** Variant data types
 
-For passing messages over a network or through an external message queue, I've used the [[https://github.com/mapbox/variant][mapbox variant]] library, which is similar to boost::variant. Instead of sending /many/ types of messages =A=, =B=, =C= over the network, I send /one/ type, =variant<A,B,C>=. The variant keeps track of which type the message is.
+For passing messages over a network or through an external message queue, I've used the [[https://github.com/mapbox/variant][mapbox::variant]] library, which is similar to boost::variant. Instead of sending /many/ types of messages =A=, =B=, =C= over the network, I send /one/ type, =variant<A,B,C>=. The variant keeps track of which type the message is.
 
 This keeps the system simpler. I don't need serialization to know about multiple types; it only knows about serializing one type. The variant class knows about multiple types but not about serialization.
 
-To serialize a variant, serialize the integer type code and then serialize the data. To deserialize a variant, deserialize the type code, switch to that variant, then deserialize the data. This code is included in traverse-variant.h.
+The code in traverse-variant.h will serialize a variant by first serializing the integer type code and then serializing the data. It will deserialize by first deserializaing the the type code, switching to that variant, then deserializing the data.
 
 One of the downsides of two-axis extension is that there can be "holes" in the combinations of extensions. I did not define the variant+json or variant+lua combinations.
 
-I have also included a pattern matching convenience wrapper in variant-util.h.
+I have a pattern matching convenience function in variant-util.h.
 
 ** Other data types
 
