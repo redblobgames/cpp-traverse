@@ -1,5 +1,8 @@
 #!/bin/bash
+OUTPUT="/tmp/a.out"
+COMPILE="c++ -g -std=c++14 -o $OUTPUT"
 
-c++ -g -std=c++14 test-traverse.cpp test-link.cpp && ./a.out
-c++ -g -std=c++14 test-varint.cpp && ./a.out
+$COMPILE test-traverse.cpp test-link.cpp && $OUTPUT
+$COMPILE test-int-encoding.cpp && $OUTPUT
+$COMPILE test-json.cpp && $OUTPUT
 

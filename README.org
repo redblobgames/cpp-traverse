@@ -1,29 +1,24 @@
 * Motivation
 
-When using some serialization libraries I have to write code to traverse my data structures and then put each of my struct's fields into the format the serialization library wants, and then I have to do this again in reverse.
+When using some serialization libraries I have to write code to traverse my data structures and then put each of my struct's fields into the format the serialization library wants, and then I have to do this again in reverse. I have to write this traversal code again when converting to JSON or Lua. I have to write it again when writing a debug GUI that lets me see all the values. I wanted to reduce the boilerplate.
 
-This library reduces most of that boilerplate, but only for certain types of data structures. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, enums, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
+This isn't a general purpose library. I created it primarily for my own use. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, enums, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
 
-Since there are many different data structures and many different serialization/deserialization libraries, there are two axes for extension:
+Since there are many different data structures (/nouns/) and many different operations we want to do to them (/verbs/), there are two axes for extension:
 
-| Visitor \\ Type    | number | string | vector | struct1 | struct2 | ... |
-|--------------------+--------+--------+--------+---------+---------+-----|
-| (generic)          |        |        |        |       2 |       2 |   2 |
-| Debug output       |      1 |      1 |      1 |         |         |     |
-| Binary serialize   |      1 |      1 |      1 |         |         |     |
-| Binary deserialize |      1 |      1 |      1 |         |         |     |
-| JSON serialize     |      1 |      1 |      1 |         |         |     |
-| JSON deserialize   |      1 |      1 |      1 |         |         |     |
-| GUI output         |      1 |      1 |      1 |         |         |     |
-| ...                |        |        |        |         |         |     |
+| Operation \\ Type  | enum | number | string | vector | struct1 | struct2 | ... |
+|--------------------+------+--------+--------+--------+---------+---------+-----|
+| Debug output       |      |        |        |        |         |         |     |
+| Binary serialize   |      |        |        |        |         |         |     |
+| Binary deserialize |      |        |        |        |         |         |     |
+| GUI output         |      |        |        |        |         |         |     |
+| ...                |      |        |        |        |         |         |     |
 
-I don't want to define every one of these. Instead, each visitor type defines the (1) entries: it has to handle numbers, strings, vectors. Each user-defined struct defines the (2) entries. The library fills in the rest.
-
-I created this library primarily for my own use.
+Two-axis extension can leave "holes" in the matrix. For example, if you add a new extension for Lua that handles enum, number, string, vector, and structs, and you also add a new extension for std::multiset that handles debug output, binary serialize, binary deserialize, and gui output, there's no code to handle the /combination/ of Lua and multiset. The library doesn't have a way to automatically fill those holes, but is designed to be "open" so that the end user can add a handle for any missing combinations.
 
 * Installation
 
-This is a header-only library, but if you are want to use the optional JSON component, install picojson:
+This is a header-only library, but has optional extensions for JSON (via picojson), Lua, and mapbox::variant. To install the dependencies for the extensions:
 
 #+begin_src sh
 git submodule init
@@ -32,7 +27,7 @@ git submodule update
 
 * Usage
 
-To use any of the visitors, construct one, then call the visit function. The error handling differs for each type of visitor. CoutWriter and BinarySerialize and JsonWriter don't report errors; BinaryDeserialize has an Errors() function; JsonReader takes an errors stream parameter that it writes to.
+To use any of the visitors, construct one, then call the visit function. The error handling differs for each type of visitor. For example:
 
 #+begin_src cpp
 traverse::BinarySerialize writer;
@@ -56,8 +51,6 @@ TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 
 If the fields aren't public, you will need to declare the visit functions as friends; see traverse.h for details.
 
-For portability, use {uint,int}{8,16,32,64}_t types instead of char, bool, int, long. For enums, use C++11 enums that let you specify the size. The binary serialize/deserialize formats will handle size changes but other visitor classes may not.
-
 * Visitor types
 
 As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. These are the visitor types included with the library:
@@ -71,45 +64,84 @@ The =CoutWriter= writes everything to stdout.
 The =BinarySerialize= and =BinaryDeserialize= classes write/read to a simple binary format. 
 There is no backwards/forwards compatibility, compression, optional fields, data structure sharing, zero-copy, support for multiple programming languages, or other nice features. 
 
-If there are errors during deserialization, the =errors= field will contain them. If the string is empty, there were no errors.
+If there are structural errors during deserialization, the =errors= field will contain them. If the string is empty, there were no errors. The library does not perform semantic validation such as numbers being in range; you will have to write your own code for that.
+
+Integers are encoded using Google's [[https://developers.google.com/protocol-buffers/docs/encoding][ZigZag format]] (from Google Protocol Buffers). It handles endian changes and also size changes. You can binary serialize a big endian int16 and binary deserialize into a little endian int32.
+
+The deserialization code is intended to handle malformed data but the tests are not extensive enough for me to have high confidence in this yet.
 
 ** JSON serialization
 
-The JSON serialize and deserialize uses the [[https://github.com/kazuho/picojson][picojson]] library. The visitors convert /to and from picojson values/, not to and from JSON strings. The caller uses picojson to parse a JSON string into a picojson value, then a deserialization visitor to convert a picojson value into the data structure. In the other direction, the caller uses the serialization visitor to convert a data structure into a picojson value, then the picojson library can stringify that into a JSON string. See the top of traverse-json.h.
+The JSON extension uses the [[https://github.com/kazuho/picojson][picojson]] library. The visitors convert /to and from picojson values/, not to and from JSON strings. 
 
-When deserializing, the library leaves data unchanged in the object if it does not have new data to place there. If the JSON object does not contain all the fields in the user struct, or if the types don't match, those fields will be left unchanged.
+For C++ to JSON, use a writer visitor to convert a C++ data structure into picojson, then picojson can convert this into a JSON string. Example:
 
-Any errors and warnings during deserialization are written to the =errors= stream. Use a stringstream that captures them; if the string is empty, there were no problems.
+#+begin_src cpp
+picojson::value output;
+traverse::JsonWriter jsonwriter{output};
+visit(jsonwriter, yourobject);
+std::cout << output.serialize();
+#+end_src
 
-** Other serialization
+Integers, enums, and floats are written as JSON numbers; the library doesn't handle overflow. Strings, vectors, and structs are written as JSON strings, arrays, and objects.
 
-The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, JSON, or one of many other formats. The only one of these I've tried is JSON, using picojson.
+For JSON to C++, use picojson to parse a JSON string into a picojson value, then a reader visitor to convert a picojson value into the C++ data structure. Example:
+
+#+begin_src cpp
+picojson::value input;
+auto err = picojson::parse(input, "{\"a\": 3}");
+if (!err.empty()) { throw "parse error"; }
+std::stringstream errors;
+traverse::JsonReader jsonreader{input, errors};
+visit(jsonreader, yourobject);
+if (!errors.empty()) { throw "type mismatch error"; }
+#+end_src
+
+When deserializing, there may be type mismatches between the JSON data and the C++ data structures. The library leaves data unchanged in the object if it does not have new data to place there. If the JSON object does not contain all the fields in the user struct, or if the types don't match, those fields will be left unchanged. Any errors and warnings during deserialization are written to the =errors= stream. Use a stringstream that captures them; if the string is empty, there were no problems.
+
+It is expected that you will put a convenience wrapper around this.
+
+** Lua serialization
+
+The Lua extension uses the C-Lua API. The writer converts a C++ value into a Lua equivalent and pushes it onto the the Lua stack.
+
+#+begin_src cpp
+lua_State* L;
+traverse::LuaWriter luawriter{L};
+visit(luawriter, yourobject);
+// this leaves the object at the top of the lua stack
+#+end_src
+
+Integers, enums, and floats are written as Lua numbers; the library doesn't handle overflow. Strings are written as Lua strings. Vectors and structs are written as Lua tables.
+
+The reader pops a value off the Lua stack and writes it to a C++ value.
+
+#+begin_src cpp
+// first put a lua object at the top of the stack
+std::stringstream errors;
+traverse::LuaReader luareader{L, errors};
+visit(luareader, yourobject);
+if (!errors.empty()) { throw "read error"; }
+// the value will be popped off the lua stack
+#+end_src
+
+As Lua is dynamically typed, and tables are used both as arrays and structs, there are several type mismatches that may occur when converting Lua to C++. See the `LuaReader` class in traverse-lua.h to control which type mismatches will be treated as errors and which will be ignored.
+
+It is expected that you will put a convenience wrapper around this.
+
+I have also included a Lua-to-string and string-to-Lua helper function (primarily for unit tests) in lua-util.h.
 
 ** Other visitors
 
-I've used this library to visit the fields of data structures so that I can display them with the [[https://github.com/ocornut/imgui][dear imgui]] library. I haven't included that code here. Look at the existing visitors in traverse.h to see how to write a new one. You'll have to define how the visitor works with each data type (integers, strings, vectors, structs).
+The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in traverse.h, traverse-json.h, traverse-lua.h to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
 
 * Data types
 
-As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. These are the data types included with the library:
-
-** Signed, unsigned integers
-
-For binary serialization, integers are encoded using Google's ZigZag format (from Google Protocol Buffers). It handles big/little endian, changes in size (e.g. network server is 64 bit but client is 32 bit), and also encodes pretty compactly. For JSON, integers are written as JSON numbers; the library doesn't handle overflow.
-
-** std::string
-
-For binary serialization, strings are written as a size followed by the data. For JSON, strings are written as JSON strings.
-
-** std::vector
-
-For binary serialization, vectors are written as a size followed by serializing each element. For JSON, vectors are written as JSON arrays.
-
-** User-defined structs
+As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. Each of the included visitors supports signed/unsigned integers, enum, class enum, std::string, std::vector, and user-defined structs. 
 
 Use the =TRAVERSE_STRUCT= macro to define the visitor for a user-defined struct or class. For example: =TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))= will visit the =x= and =y= fields of the =Point= class. If the fields aren't public, you need to make the visitor a friend. Put =TRAVERSE_IS_FRIEND(MyUserType)= inside your class =MyUserType= to declare the friend functions.
 
-For binary serialization, structs are written by serializing each field. For JSON, structs are written as JSON objects.
+For binary serialization, structs are written by serializing each field. For JSON, structs are written as JSON objects. For Lua, structs are converted into Lua tables.
 
 ** Variant data types
 
@@ -117,84 +149,21 @@ For passing messages over a network or through an external message queue, I've u
 
 This keeps the system simpler. I don't need serialization to know about multiple types; it only knows about serializing one type. The variant class knows about multiple types but not about serialization.
 
-I can then make serialization work with variants by writing out the integer variant code, then the data:
+To serialize a variant, serialize the integer type code and then serialize the data. To deserialize a variant, deserialize the type code, switch to that variant, then deserialize the data. This code is included in traverse-variant.h.
 
-#+begin_src cpp
-namespace traverse {
+One of the downsides of two-axis extension is that there can be "holes" in the combinations of extensions. I did not define the variant+json or variant+lua combinations.
 
-struct BinarySerializeVariantHelper {
-  BinarySerialize& writer;
-  template<typename T> void operator()(const T& value) {
-    visit(writer, value);
-  }
-};
-
-template<typename ...Variants>
-void visit(BinarySerialize& writer, 
-           const variant<Variants...>& value) {
-  uint8_t which = value.which();
-  visit(writer, which);
-  mapbox::util::apply_visitor(
-      BinarySerializeVariantHelper{writer}, 
-      value
-  );
-}
-
-}
-#+end_src
-
-I can make deserialization work with variants by iterating over the variant types and invoking deserialization when the variant code matches:
-
-#+begin_src cpp
-namespace traverse {
-
-template<typename VariantType>
-void deserialize_variant_helper(BinaryDeserialize& reader,
-                                uint8_t which, uint8_t index,
-                                VariantType&) {
-  reader.errors << "Error: tried to deserialize variant " << which
-                << " but there were only " << index << " types."
-                << std::endl;
-}
-
-template<typename VariantType, typename First, typename ...Rest>
-void deserialize_variant_helper(BinaryDeserialize& reader,
-                                uint8_t which, uint8_t index,
-                                VariantType& value) {
-  if (which == index) {
-    value.template set<First>();
-    visit(reader, value.template get<First>());
-  } else {
-    deserialize_variant_helper<VariantType, Rest...>(
-        reader, which, index+1, value);
-  }
-}
-  
-template<typename ...Variants>
-void visit(BinaryDeserialize& reader, 
-           variant<Variants...>& value) {
-  uint8_t which;
-  visit(reader, which);
-  deserialize_variant_helper<variant<Variants...>, Variants...>
-    (reader, which, 0, value);
-}
-
-}
-#+end_src
-
-This code is neither part of BinarySerialize/BinaryDeserialize nor part of mapbox variant. It's a small amount of glue code that makes these independent libraries work together.
-
-I didn't implement JSON serialization for variants.
+I have also included a pattern matching convenience wrapper in variant-util.h.
 
 ** Other data types
 
 You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at traverse.h to see how string and vector work, or look above to see how I defined serialize and deserialize for variant types.
 
-I didn't need float/double for my project so I didn't implement them.
+I didn't need float/double binary serialization for my project so I didn't implement them, but the JSON and Lua extensions do handle floats/doubles.
 
 * Libraries
 
-I'm using the [[https://github.com/kazuho/picojson][picojson]] library, licensed 2-clause BSD:
+The JSON extension uses the [[https://github.com/kazuho/picojson][picojson]] library, licensed 2-clause BSD:
 
 #+begin_example
 Copyright 2009-2010 Cybozu Labs, Inc.
@@ -224,3 +193,34 @@ ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
 #+end_example
 
+The Lua extension links with the C-Lua library (not included).
+
+The Variant extension uses the [[https://github.com/mapbox/variant][mapbox::variant]] library, licensed 3-clause BSD:
+
+#+begin_example
+Copyright (c) MapBox
+All rights reserved.
+
+Redistribution and use in source and binary forms, with or without modification,
+are permitted provided that the following conditions are met:
+
+- Redistributions of source code must retain the above copyright notice, this
+  list of conditions and the following disclaimer.
+- Redistributions in binary form must reproduce the above copyright notice, this
+  list of conditions and the following disclaimer in the documentation and/or
+  other materials provided with the distribution.
+- Neither the name "MapBox" nor the names of its contributors may be
+  used to endorse or promote products derived from this software without
+  specific prior written permission.
+
+THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
+ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR
+ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
+(INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+(INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
+SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
+#+end_example

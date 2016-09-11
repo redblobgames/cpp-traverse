@@ -1,5 +1,27 @@
 // Copyright 2015 Red Blob Games <redblobgames@gmail.com>
+// https://github.com/redblobgames/cpp-traverse
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
+
+/**
+ * The traverse library traverses a C++ data structure recursively, 
+ * applying some operation to each element. Included operations are
+ *
+ *   - debugging output using ostream::operator <<
+ *   - binary serialization
+ *   - binary deserialization
+ *
+ * The serialization format offers no backwards/forwards compatibility.
+ * It is useful for network messages between client and server, but not
+ * for save files or other uses of serialization.
+ *
+ * The traverse library is generic and can be extended to more data types
+ * and also more operations. To extend it to work on a user-defined struct
+ * or class, see TRAVERSE_STRUCT below. To extend it to work on a container,
+ * see traverse-variant.h, which extends traverse to work on mapbox::variant.
+ * To extend it to a new operation, see traverse-json.h, which writes to or 
+ * reads from a JSON object (via the picojson library), and traverse-lua.h, 
+ * which writes to or reads from a Lua object on the Lua stack.
+ */
 
 #ifndef TRAVERSE_H
 #define TRAVERSE_H
@@ -11,10 +33,6 @@
 #include <vector>
 #include <string>
 
-#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } } inline std::ostream& operator << (std::ostream& out, const TYPE& obj) { traverse::CoutWriter writer(out); visit(writer, obj); return out; }
-#define FIELD(NAME) .field(#NAME, obj.NAME)
-#define TRAVERSE_IS_FRIEND(TYPE) template <typename V> friend void traverse::visit(V&, TYPE&); template <typename V> friend void traverse::visit(V&, const TYPE&);
-
 namespace traverse {
 
   /* This is how user-defined structs are described to the system:
@@ -23,12 +41,12 @@ namespace traverse {
    * 
    * That macro turns into
    *
-   * template<typename Visitor>
-   * void visit(Visitor& visitor, MyUserType& obj) {
-   *   visit_struct("MyUserType", visitor)
-   *      .field("x", obj.x)
-   *      .field("y", obj.y);
-   * }
+   *     template<typename Visitor>
+   *     void visit(Visitor& visitor, MyUserType& obj) {
+   *       visit_struct("MyUserType", visitor)
+   *          .field("x", obj.x)
+   *          .field("y", obj.y);
+   *     }
    *
    * as well as a const MyUserType& version.
    *
@@ -40,14 +58,14 @@ namespace traverse {
    *
    * If some fields aren't public, put this inside your class:
    * 
-   * TRAVERSE_IS_FRIEND(MyUserType)
+   *     TRAVERSE_IS_FRIEND(MyUserType)
    *
    * That macro turns into
    * 
-   * template <typename V>
-   *    friend void traverse::visit(V&, MyUserType&);
-   * template <typename V>
-   *    friend void traverse::visit(V&, const MyUserType&);
+   *     template <typename V>
+   *        friend void traverse::visit(V&, MyUserType&);
+   *     template <typename V>
+   *        friend void traverse::visit(V&, const MyUserType&);
    *
    */
   
@@ -77,6 +95,11 @@ namespace traverse {
     : std::integral_constant<bool, std::is_enum<T>::value || std::is_arithmetic<T>::value>
   {};
 }
+
+
+#define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } } inline std::ostream& operator << (std::ostream& out, const TYPE& obj) { traverse::CoutWriter writer(out); visit(writer, obj); return out; }
+#define FIELD(NAME) .field(#NAME, obj.NAME)
+#define TRAVERSE_IS_FRIEND(TYPE) template <typename V> friend void traverse::visit(V&, TYPE&); template <typename V> friend void traverse::visit(V&, const TYPE&);
 
 
 /* The CoutWriter just writes everything to std::cout */
@@ -155,8 +178,8 @@ namespace traverse {
  * 0b1111111100000000 ==> 1:0000000 1:1111110 0:0000011
  *
  * Signed integers: transform the number into an unsigned integer.
- *    - Positive integers X become X:0 (e.g. X << 1)
- *    - Negative integers X become (-X-1):1
+ *   - Positive integers X become X:0 (e.g. X << 1)
+ *   - Negative integers X become (-X-1):1
  * Every signed integer has a unique unsigned representation this way.
  * No bits are wasted, and every signed integer can be represented.
  * NOTE: I believe this is equivalent to Google's ZigZag format

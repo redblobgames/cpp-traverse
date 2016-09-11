@@ -2,7 +2,6 @@
 // included from more than one cpp file. The code isn't actually called.
 
 #include "traverse.h"
-#include "traverse-json.h"
 #include <iostream>
 
 struct Point {
@@ -16,15 +15,10 @@ void test_linkage() {
   
   traverse::CoutWriter writer1;
   traverse::BinarySerialize writer2;
-  picojson::value json;
-  traverse::JsonWriter writer3{json};
 
   visit(writer1, p);
   visit(writer2, p);
-  visit(writer3, p);
 
   traverse::BinaryDeserialize reader2{writer2.out.str()};
-  traverse::JsonReader reader3{json, std::cerr};
   visit(reader2, q);
-  visit(reader3, q);
 }

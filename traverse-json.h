@@ -1,4 +1,5 @@
 // Copyright 2015 Red Blob Games <redblobgames@gmail.com>
+// https://github.com/redblobgames/cpp-traverse
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
 #ifndef TRAVERSE_JSON_H
@@ -7,28 +8,32 @@
 #include "traverse.h"
 #include "picojson/picojson.h"
 
-/* JSON output:
+/* Example usage for C++ to JSON:
  *
- * picojson::value json;
- * traverse::JsonWriter jsonwriter{json};
- * visit(jsonwriter, yourobject);
- * std::cout << json.serialize();
+ *     picojson::value output;
+ *     traverse::JsonWriter jsonwriter{output};
+ *     visit(jsonwriter, yourobject);
+ *     std::cout << output.serialize();
  *
  *
- * JSON input:
+ * Example usage for JSON to C++:
  * 
- * picojson::value json;
- * auto err = picojson::parse(json, "json string");
- * if (!err.empty()) { throw "parse error"; }
- * std::stringstream errors;
- * traverse::JsonReader jsonreader{json, errors};
- * if (!errors.empty()) { throw "read error"; }
- * visit(jsonreader, yourobject);
+ *     picojson::value input;
+ *     auto err = picojson::parse(input, "json string");
+ *     if (!err.empty()) { throw "parse error"; }
+ *     std::stringstream errors;
+ *     traverse::JsonReader jsonreader{input, errors};
+ *     visit(jsonreader, yourobject);
+ *     if (!errors.empty()) { throw "read error"; }
  *
- * TODO: wrapper around this code
+ * It is expected that you will put a convenience wrapper
+ * around this.
  */
 namespace traverse {
-  
+
+  /** The JsonWriter will take a value from C++ and write it into
+   *  a picojson object.
+   */
   struct JsonWriter {
     picojson::value& out;
     JsonWriter(picojson::value& out_): out(out_) {}
@@ -77,6 +82,10 @@ namespace traverse {
   };
 
 
+  /** The JsonReader will take a picojson object and convert
+   *  into a C++ object, leaving error messages in the user-supplied
+   *  error stream.
+   */
   struct JsonReader {
     const picojson::value& in;
     std::ostream& errors;
