@@ -145,7 +145,7 @@ For binary serialization, structs are written by serializing each field. For JSO
 
 ** Variant data types
 
-For passing messages over a network or through an external message queue, I've used the [[https://github.com/mapbox/variant][mapbox::variant]] library, which is similar to boost::variant. Instead of sending /many/ types of messages =A=, =B=, =C= over the network, I send /one/ type, =variant<A,B,C>=. The variant keeps track of which type the message is.
+For passing messages over a network or through an external message queue, I've used the [[https://github.com/mapbox/variant][mapbox::variant]] library, which is similar to [[http://theboostcpplibraries.com/boost.variant][boost::variant]] and [[http://en.cppreference.com/w/cpp/utility/variant][std::variant]]. Instead of sending /many/ types of messages =A=, =B=, =C= over the network, I send /one/ type, =variant<A,B,C>=. The variant keeps track of which type the message is.
 
 This keeps the system simpler. I don't need serialization to know about multiple types; it only knows about serializing one type. The variant class knows about multiple types but not about serialization.
 
@@ -153,7 +153,7 @@ The code in [[file:traverse-variant.h]] will serialize a variant by first serial
 
 One of the downsides of two-axis extension is that there can be "holes" in the combinations of extensions. I did not define the variant+json or variant+lua combinations.
 
-I have a pattern matching convenience function in [[file:variant-util.h]].
+I have a pattern matching convenience function called =visit= in [[file:variant-util.h]]; I didn't know about [[http://en.cppreference.com/w/cpp/utility/variant/visit][std::visit]] when I named it.
 
 ** Other data types
 

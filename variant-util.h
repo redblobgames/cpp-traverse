@@ -38,7 +38,10 @@
  *     and then have the lambdas return that type.
  *
  * Someone has a similar idea with a different implementation here:
- * <https://github.com/mapbox/variant/issues/113>
+ * <https://github.com/mapbox/variant/issues/113>. His version calls
+ * exactly one clause instead of multiple, signals an error if not all
+ * variants are handled, lets you return a value, and can allow for a
+ * default clause.
  */
 
 #ifndef VARIANT_UTIL_H
