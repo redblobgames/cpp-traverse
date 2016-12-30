@@ -7,7 +7,41 @@
 #include "test.h"
 
 
+template<typename T>
+std::string to_bytes(const T& obj) {
+    traverse::BinarySerialize serialize;
+    visit(serialize, obj);
+    std::string msg = serialize.out.str();
+    std::stringstream out;
+    for (unsigned char c : msg) {
+      out << int(c) << ' ';
+    }
+    return out.str();
+}
+
+
+void test_int() {
+  TEST_EQ(to_bytes('@'), "128 1 ");
+  TEST_EQ(to_bytes(int(0)), "0 ");
+  TEST_EQ(to_bytes(int(-1)), "1 ");
+  TEST_EQ(to_bytes(int(1)), "2 ");
+  TEST_EQ(to_bytes(int(1024)), "128 16 ");
+  TEST_EQ(to_bytes(long(1)), "2 ");
+  TEST_EQ(to_bytes((unsigned int)(1)), "1 ");
+}
+
+  
+void test_enum() {
+  TEST_EQ(to_bytes(Mood::HULK_SMASH), "2 ");
+  TEST_EQ(to_bytes(Signed::NEGATIVE), "1 ");
+  TEST_EQ(to_bytes(Signed::ONE), "2 ");
+}
+
+  
 int main() {
+  test_int();
+  test_enum();
+    
   traverse::CoutWriter writer;
   const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
 
@@ -23,16 +57,11 @@ int main() {
 
   {
     std::cout << "__ Serialize to bytes __ " << std::endl;
-    std::string msg = serialize.out.str();
-    std::stringstream out;
-    for (size_t i = 0; i < msg.size(); i++) {
-      out << int(msg[i]) << ' ';
-    }
-    TEST_EQ(out.str(), "1 2 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
+    TEST_EQ(to_bytes(polygon), "1 2 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
 
     std::cout << "__ Deserialize from bytes __ " << std::endl;
     std::stringstream out1, out2;
-    traverse::BinaryDeserialize reader(msg);
+    traverse::BinaryDeserialize reader(serialize.out.str());
     Polygon polygon2;
     visit(reader, polygon2);
     out1 << polygon;

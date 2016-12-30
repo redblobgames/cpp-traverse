@@ -41,9 +41,15 @@ namespace traverse {
   };
   
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(LuaWriter& writer, const T& value) {
     lua_pushnumber(writer.L, double(value));
+  }
+
+  template <typename T> inline
+  typename std::enable_if<std::is_enum<T>::value, void>::type
+  visit(LuaWriter& writer, const T& value) {
+    visit(writer, typename std::underlying_type<T>::type(value));
   }
 
   inline void visit(LuaWriter& writer, const std::string& string) {
@@ -120,7 +126,7 @@ namespace traverse {
   };
 
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value, void>::type
   visit(LuaReader& reader, T& value) {
     if (lua_type(reader.L, -1) != LUA_TNUMBER) {
       if (!reader.ignore_wrong_type) {
@@ -138,6 +144,14 @@ namespace traverse {
     lua_pop(reader.L, 1);
   }
 
+  template<typename T> inline
+  typename std::enable_if<std::is_enum<T>::value, void>::type
+  visit(LuaReader& reader, T& value) {
+    typename std::underlying_type<T>::type v;
+    visit(reader, v);
+    value = T(v);
+  }
+  
   inline void visit(LuaReader& reader, std::string& string) {
     if (lua_type(reader.L, -1) != LUA_TSTRING) {
       if (!reader.ignore_wrong_type) {

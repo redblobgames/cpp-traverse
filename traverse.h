@@ -89,11 +89,6 @@ namespace traverse {
    * it handles (primitives, strings, vectors) and optionally a
    * StructVisitor to handle the field name/value pairs in a struct.
    */
-
-  template<typename T>
-  struct is_enum_or_number
-    : std::integral_constant<bool, std::is_enum<T>::value || std::is_arithmetic<T>::value>
-  {};
 }
 
 
@@ -119,9 +114,7 @@ namespace traverse {
   template<typename T> inline
   typename std::enable_if<std::is_enum<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
-    // There's a << defined for C enums but not for C++11 enums, so
-    // convert to int:
-    writer.out << int(value);
+    writer.out << typename std::underlying_type<T>::type(value);
   }
 
   inline void visit(CoutWriter& writer, const std::string& string) {
@@ -246,18 +239,24 @@ namespace traverse {
   };
 
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value && !std::is_signed<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value && !std::is_signed<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
     uint64_t wide_value = uint64_t(value);
     write_unsigned_int(writer.out, wide_value);
   }
 
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value && std::is_signed<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value && std::is_signed<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
     write_signed_int(writer.out, value);
   }
 
+  template <typename T>
+  inline typename std::enable_if<std::is_enum<T>::value, void>::type
+  visit(BinarySerialize& writer, const T& value) {
+    visit(writer, typename std::underlying_type<T>::type(value));
+  }
+  
   inline void visit(BinarySerialize& writer, const std::string& string) {
     uint64_t size = string.size();
     write_unsigned_int(writer.out, size);
@@ -288,7 +287,7 @@ namespace traverse {
   };
  
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value && !std::is_signed<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value && !std::is_signed<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
     uint64_t wide_value;
     if (!read_unsigned_int(reader.in, wide_value)) {
@@ -298,13 +297,21 @@ namespace traverse {
   }
     
   template<typename T> inline
-  typename std::enable_if<is_enum_or_number<T>::value && std::is_signed<T>::value, void>::type
+  typename std::enable_if<std::is_arithmetic<T>::value && std::is_signed<T>::value, void>::type
   visit(BinaryDeserialize& reader, T& value) {
     int64_t wide_value;
     if (!read_signed_int(reader.in, wide_value)) {
       reader.errors << "Error: not enough data in buffer to read number" << std::endl;
     }
     value = T(wide_value);
+  }
+
+  template<typename T> inline
+  typename std::enable_if<std::is_enum<T>::value, void>::type
+  visit(BinaryDeserialize& reader, T& value) {
+    typename std::underlying_type<T>::type v;
+    visit(reader, v);
+    value = T(v);
   }
 
   inline void visit(BinaryDeserialize& reader, std::string& string) {

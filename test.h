@@ -40,7 +40,8 @@ TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
 // C and C++ enums
 enum Color { RED, BLUE };
-enum class Mood { HAPPY, SAD, HULK_SMASH };
+enum class Mood : unsigned int { HAPPY, SAD, HULK_SMASH };
+enum class Signed : int { NEGATIVE = -1, ZERO, ONE };
 
 // Nested structure with enums, strings, vectors
 struct Polygon {
