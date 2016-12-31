@@ -6,7 +6,7 @@
 #include "traverse-variant.h"
 #include "variant-util.h"
 
-#include "variant/variant.hpp"
+#include "mapbox/variant.hpp"
 template<typename ...T> using variant = mapbox::util::variant<T...>;
 
 #include <type_traits>
@@ -46,7 +46,7 @@ void test_match_function() {
   MessageQueue queue{m1, m2, m3};
 
   for (auto& msg : queue) {
-    match(msg,
+    msg.match(
           [&](const Move& m) {
             output << "Move ";
             visit(debug, m);
@@ -55,15 +55,14 @@ void test_match_function() {
             output << "Create ";
             visit(debug, m);
           },
-          /* Message types can be in here multiple times */
-          [&](const Move& m) {
-            output << "MoveAgain ";
+          [&](const Quit& m) {
+            output << "Quit ";
+            visit(debug, m);
           }
-          /* No case handles the Quit message */
           );
   }
 
-  TEST_EQ(output.str(), "Move Move{speed:1, turn:2}MoveAgain Create Create{id:42, x:-10, y:-10}");
+  TEST_EQ(output.str(), "Move Move{speed:1, turn:2}Create Create{id:42, x:-10, y:-10}Quit Quit{time:100}");
 }
 
 

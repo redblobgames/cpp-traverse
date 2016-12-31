@@ -57,16 +57,19 @@ As described in the Motivation section, I want to be able to extend the set of v
 
 ** Debug output
 
-The =CoutWriter= writes everything to stdout. It might be useful to wrap this in a generic =operator <<(ostream&)= so that user-defined structs can be written to streams.
+The =CoutWriter= writes everything to stdout. The =TRAVERSE_STRUCT= macro defines =operator <<(ostream&)= to use =CoutWriter= for output.
+
+*** TODO User defined <<
+
+If =operator <<= is already defined on your type =T=, the =TRAVERSE_STRUCT= macro fails. I need to provide an alternative.
 
 ** Binary serialization
 
-The =BinarySerialize= and =BinaryDeserialize= classes write/read to a simple binary format. 
-There is no backwards/forwards compatibility, compression, optional fields, data structure sharing, zero-copy, support for multiple programming languages, or other nice features. 
+The =BinarySerialize= and =BinaryDeserialize= classes write/read to a simple binary format. There is no backwards/forwards compatibility, compression, optional fields, data structure sharing, zero-copy, support for multiple programming languages, or other nice features.
 
-If there are structural errors during deserialization, the =errors= field will contain them. If the string is empty, there were no errors. The library does not perform semantic validation such as numbers being in range; you will have to write your own code for that.
+If there are structural errors during deserialization, the =errors= field will contain them. If the string is empty, there were no errors. The library does not perform semantic validation such as numbers being in range or an enum being one of the named items; you will have to write your own code for that.
 
-Integers are encoded using Google's [[https://developers.google.com/protocol-buffers/docs/encoding][ZigZag format]] (from Google Protocol Buffers). It handles endian changes and also size changes. You can binary serialize a big endian int16 and binary deserialize into a little endian int32.
+Integers are encoded using Google's [[https://developers.google.com/protocol-buffers/docs/encoding][ZigZag format]] (from Google Protocol Buffers). It handles endian changes and also size changes. You can binary serialize a big endian int16 and binary deserialize into a little endian int32. You can't mix signed and unsigned ints.
 
 The deserialization code is intended to handle malformed data but the tests are not extensive enough for me to have high confidence in this yet.
 
@@ -152,8 +155,6 @@ This keeps the system simpler. I don't need serialization to know about multiple
 The code in [[file:traverse-variant.h]] will serialize a variant by first serializing the integer type code and then serializing the data. It will deserialize by first deserializaing the the type code, switching to that variant, then deserializing the data.
 
 One of the downsides of two-axis extension is that there can be "holes" in the combinations of extensions. I did not define the variant+json or variant+lua combinations.
-
-I have a pattern matching convenience function called =visit= in [[file:variant-util.h]]; I didn't know about [[http://en.cppreference.com/w/cpp/utility/variant/visit][std::visit]] when I named it.
 
 ** Other data types
 

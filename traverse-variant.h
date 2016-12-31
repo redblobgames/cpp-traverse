@@ -15,8 +15,8 @@
 #define TRAVERSE_VARIANT_H
 
 #include "traverse.h"
-#include "variant/variant.hpp"
-#include "variant/variant_io.hpp"
+#include "mapbox/variant.hpp"
+#include "mapbox/variant_io.hpp"
 
 
 namespace traverse {

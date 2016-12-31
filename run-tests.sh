@@ -1,7 +1,8 @@
 #!/bin/bash
 OUTPUT="/tmp/a.out"
+INCLUDE="-I variant/include"
 WARNINGS="-Wall -Wextra -pedantic -Wpointer-arith -Wshadow -Wfloat-conversion -Wno-unused-function -Wno-unused-parameter"
-COMPILE="c++ -g -std=c++14 $WARNINGS -o $OUTPUT"
+COMPILE="c++ -g -std=c++14 $INCLUDE $WARNINGS -o $OUTPUT"
 
 # Tests write errors to stderr and non-errors to stdout
 
