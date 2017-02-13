@@ -18,7 +18,7 @@ Two-axis extension can leave "holes" in the matrix. For example, if you add a ne
 
 * Installation
 
-This is a header-only library, but has optional extensions for JSON (via [[https://github.com/kazuho/picojson][picojson]]), [[https://www.lua.org/manual/5.2/][Lua 5.2]], and [[https://github.com/mapbox/variant][mapbox::variant]]. To install the dependencies for the extensions:
+This is a header-only library, but has optional extensions for JSON (via [[https://github.com/kazuho/picojson][picojson]] or [[http://rapidjson.org/][rapidjson]]), [[https://www.lua.org/manual/5.2/][Lua 5.2]], and [[https://github.com/mapbox/variant][mapbox::variant]]. To install the dependencies for the extensions:
 
 #+begin_src sh
 git submodule init
@@ -73,11 +73,9 @@ Integers are encoded using Google's [[https://developers.google.com/protocol-buf
 
 The deserialization code is intended to handle malformed data but the tests are not extensive enough for me to have high confidence in this yet.
 
-** JSON serialization
+** JSON serialization using picojson
 
-The JSON extension uses the [[https://github.com/kazuho/picojson][picojson]] library. The visitors convert /to and from picojson values/, not to and from JSON strings. 
-
-For C++ to JSON, use a writer visitor to convert a C++ data structure into picojson, then picojson can convert this into a JSON string. Example:
+For C++ to JSON, use a writer visitor to convert a C++ data structure into picojson value, then the json library can convert this into a JSON string. Example:
 
 #+begin_src cpp
 picojson::value output;
@@ -86,7 +84,7 @@ visit(jsonwriter, yourobject);
 std::cout << output.serialize();
 #+end_src
 
-Integers, enums, and floats are written as JSON numbers; the library doesn't handle overflow. Strings, vectors, and structs are written as JSON strings, arrays, and objects.
+Integers, enums, and floats are written as JSON numbers. Strings, vectors, and structs are written as JSON strings, arrays, and objects.
 
 For JSON to C++, use picojson to parse a JSON string into a picojson value, then a reader visitor to convert a picojson value into the C++ data structure. Example:
 
@@ -98,6 +96,35 @@ std::stringstream errors;
 traverse::JsonReader jsonreader{input, errors};
 visit(jsonreader, yourobject);
 if (!errors.empty()) { throw "type mismatch error"; }
+#+end_src
+
+When deserializing, there may be type mismatches between the JSON data and the C++ data structures. The library leaves data unchanged in the object if it does not have new data to place there. If the JSON object does not contain all the fields in the user struct, or if the types don't match, those fields will be left unchanged. Any errors and warnings during deserialization are written to the =errors= stream. Use a stringstream that captures them; if the string is empty, there were no problems.
+
+It is expected that you will put a convenience wrapper around this.
+
+** JSON serialization using rapidjson
+
+For C++ to JSON, use a writer visitor to convert a C++ data structure into a rapidjson document, then the json library can convert this into a JSON string. Example:
+
+#+begin_src cpp
+rapidjson::StringBuffer output;
+traverse::JsonWriter jsonwriter{output};
+visit(jsonwriter, yourobject);
+std::cout << buffer.GetString();
+#+end_src
+
+Integers, doubles, enums, and floats are written as JSON numbers. Bools are written as JSON bools. Strings, vectors, and structs are written as JSON strings, arrays, and objects.
+
+For JSON to C++, use rapidjson to parse a JSON string into a rapidjson document, then a reader visitor to convert that into the C++ data structure. Example:
+
+#+begin_src cpp
+rapidjson::Document input;
+input.Parse("json string");
+if (input.HasParseError()) { throw "parse error"; }
+std::stringstream errors;
+traverse::RapidJsonReader jsonreader{input, errors};
+visit(jsonreader, yourobject);
+if (!errors.empty()) { throw "read error"; }
 #+end_src
 
 When deserializing, there may be type mismatches between the JSON data and the C++ data structures. The library leaves data unchanged in the object if it does not have new data to place there. If the JSON object does not contain all the fields in the user struct, or if the types don't match, those fields will be left unchanged. Any errors and warnings during deserialization are written to the =errors= stream. Use a stringstream that captures them; if the string is empty, there were no problems.
@@ -136,7 +163,7 @@ I have also included a Lua-to-string function =lua_repr= and a string-to-Lua fun
 
 ** Other visitors
 
-The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in [[file:traverse.h]], [[file:traverse-json.h]], [[file:traverse-lua.h]] to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
+The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in [[file:traverse.h]], [[file:traverse-picojson.h]], file:traverse-rapidjson.h [[file:traverse-lua.h]] to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
 
 * Data types
 
@@ -164,9 +191,9 @@ I didn't need float/double binary serialization for my project so I didn't imple
 
 * Libraries
 
-The JSON extension uses the [[https://github.com/kazuho/picojson][picojson]] library, licensed 2-clause BSD:
+The picojson extension uses the [[https://github.com/kazuho/picojson][picojson]] library, licensed 2-clause BSD:
 
-#+begin_example
+#+begin_quote
 Copyright 2009-2010 Cybozu Labs, Inc.
 Copyright 2011-2014 Kazuho Oku
 All rights reserved.
@@ -192,13 +219,27 @@ INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
 CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
 ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
 POSSIBILITY OF SUCH DAMAGE.
-#+end_example
+#+end_quote
+
+The rapidjson library uses the [[http://rapidjson.org/][rapidjson]] library, licensed MIT:
+
+#+begin_quote
+Tencent is pleased to support the open source community by making RapidJSON available. 
+ 
+Copyright (C) 2015 THL A29 Limited, a Tencent company, and Milo Yip.  All rights reserved.
+
+Permission is hereby granted, free of charge, to any person obtaining a copy of this software and associated documentation files (the "Software"), to deal in the Software without restriction, including without limitation the rights to use, copy, modify, merge, publish, distribute, sublicense, and/or sell copies of the Software, and to permit persons to whom the Software is furnished to do so, subject to the following conditions:
+
+The above copyright notice and this permission notice shall be included in all copies or substantial portions of the Software.
+
+THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+#+end_quote
 
 The Lua extension links with the C-Lua library (not included).
 
 The Variant extension uses the [[https://github.com/mapbox/variant][mapbox::variant]] library, licensed 3-clause BSD:
 
-#+begin_example
+#+begin_quote
 Copyright (c) MapBox
 All rights reserved.
 
@@ -224,4 +265,4 @@ LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
 ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-#+end_example
+#+end_quote

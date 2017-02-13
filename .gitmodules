@@ -6,3 +6,7 @@
 	path = variant
 	url = https://github.com/mapbox/variant.git
 	shallow = true
+[submodule "rapidjson"]
+	path = rapidjson
+	url = https://github.com/miloyip/rapidjson
+	shallow = true

@@ -11,14 +11,15 @@
 // Helper function for the unit tests. It's verbose.
 
 template <typename A, typename B>
-void _test_equal(const A& a, const B& b, const char* file, int line) {
+void _test_equal(const A& a, const B& b, const char* file, int line, bool quiet) {
   if (a != b) {
     std::cerr << " * FAIL " << file << ':' << std::dec << line << ": (" << std::hex << a << ") != (" << std::hex << b << ")" << std::endl;
-  } else {
+  } else if (!quiet) {
     std::cout << "   PASS " << file << ':' << std::dec << line << ": (" << std::hex << a << ")" << std::endl;
   }
 }
-#define TEST_EQ(a, b) _test_equal(a, b, __FILE__, __LINE__)
+#define TEST_EQ(a, b) _test_equal(a, b, __FILE__, __LINE__, false)
+#define TEST_EQ_QUIET(a, b) _test_equal(a, b, __FILE__, __LINE__, true)
 
 
 // Define some data types used in the test modules

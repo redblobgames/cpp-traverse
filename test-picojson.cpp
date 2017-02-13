@@ -3,7 +3,7 @@
 // License: Apache v2.0 <http://www.apache.org/licenses/LICENSE-2.0.html>
 
 #include "traverse.h"
-#include "traverse-json.h"
+#include "traverse-picojson.h"
 #include <iostream>
 #include "test.h"
 
@@ -16,7 +16,7 @@ int main() {
   {
     std::cout << "__ Serialize to JSON __ " << std::endl;
     picojson::value json1;
-    traverse::JsonWriter jsonwriter{json1};
+    traverse::PicoJsonWriter jsonwriter{json1};
     visit(jsonwriter, polygon);
     TEST_EQ(json1.serialize(), "{\"color\":1,\"mood\":2,\"name\":\"UFO\\\"1942\\\"\",\"points\":[{\"x\":3,\"y\":5},{\"x\":4,\"y\":6},{\"x\":5,\"y\":7}]}");
   }
@@ -30,7 +30,7 @@ int main() {
     
     std::cout << "__ Deserialize JSON to Polygon __ " << std::endl;
     std::stringstream errors;
-    traverse::JsonReader jsonreader{json2, errors};
+    traverse::PicoJsonReader jsonreader{json2, errors};
     Polygon polygon2;
     visit(jsonreader, polygon2);
 
