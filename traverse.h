@@ -114,7 +114,7 @@ namespace traverse {
   template<typename T> inline
   typename std::enable_if<std::is_enum<T>::value, void>::type
   visit(CoutWriter& writer, const T& value) {
-    writer.out << typename std::underlying_type<T>::type(value);
+    writer.out << (long long)(value);
   }
 
   inline void visit(CoutWriter& writer, const std::string& string) {
