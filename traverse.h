@@ -200,10 +200,11 @@ namespace traverse {
       bool endbit = (c & 0x80) == 0;
       result |= uint64_t(c & 0x7f) << (byte * 7);
       if (endbit) {
-        value = result;
-        return true;
+        break;
       }
     }
+    value = result;
+    return true;
   }
 
   inline void write_signed_int(std::stringbuf& out, int64_t value) {
@@ -214,7 +215,7 @@ namespace traverse {
   }
 
   inline bool read_signed_int(std::stringbuf& in, int64_t& value) {
-    uint64_t decoded;
+    uint64_t decoded = 0;
     bool status = read_unsigned_int(in, decoded);
     if (decoded & 1) {
       value = -(decoded >> 1)-1;
@@ -277,6 +278,7 @@ namespace traverse {
     std::stringbuf in;
     std::stringstream errors;
     BinaryDeserialize(const std::string& str): in(str, std::ios_base::in) {}
+    BinaryDeserialize(const char* buf, size_t len): in(string(buf, len), std::ios_base::in) {}
     std::string Errors() {
       if (in.in_avail() != 0) {
         errors << "Error: " << in.in_avail() << " extra bytes in message" << std::endl;
