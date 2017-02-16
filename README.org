@@ -21,8 +21,7 @@ Two-axis extension can leave "holes" in the matrix. For example, if you add a ne
 This is a header-only library, but has optional extensions for JSON (via [[https://github.com/kazuho/picojson][picojson]] or [[http://rapidjson.org/][rapidjson]]), [[https://www.lua.org/manual/5.2/][Lua 5.2]], and [[https://github.com/mapbox/variant][mapbox::variant]]. To install the dependencies for the extensions:
 
 #+begin_src sh
-git submodule init
-git submodule update
+git submodule update --init
 #+end_src
 
 * Usage
@@ -32,8 +31,9 @@ To use any of the visitors, construct one, then call the visit function. The err
 #+begin_src cpp
 traverse::BinarySerialize writer;
 visit(writer, yourobject);
+// writer.out contains the serialized string
 
-traverse::BinaryDeserialize reader;
+traverse::BinaryDeserialize reader(serialized_string);
 visit(reader, yourobject)
 if (!reader.Errors().empty()) throw reader.Errors();
 #+end_src
