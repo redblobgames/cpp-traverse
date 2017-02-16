@@ -278,7 +278,7 @@ namespace traverse {
     std::stringbuf in;
     std::stringstream errors;
     BinaryDeserialize(const std::string& str): in(str, std::ios_base::in) {}
-    BinaryDeserialize(const char* buf, size_t len): in(string(buf, len), std::ios_base::in) {}
+    BinaryDeserialize(const char* buf, size_t len): in(std::string(buf, len), std::ios_base::in) {}
     std::string Errors() {
       if (in.in_avail() != 0) {
         errors << "Error: " << in.in_avail() << " extra bytes in message" << std::endl;
