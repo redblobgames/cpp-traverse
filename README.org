@@ -75,7 +75,8 @@ If there are structural errors during deserialization, the =errors= field will c
 
 Integers are encoded using Google's [[https://developers.google.com/protocol-buffers/docs/encoding][ZigZag format]] (from Google Protocol Buffers). It handles endian changes and also size changes. You can binary serialize a big endian int16 and binary deserialize into a little endian int32. You can't mix signed and unsigned ints.
 
-The deserialization code is intended to handle malformed data but the tests are not extensive enough for me to have high confidence in this yet.
+The deserialization code is intended to handle malformed data. There is some fuzz testing of int, enum, struct, string, and vector deserialization using the [[http://lcamtuf.coredump.cx/afl/][AFL]] (American Fuzzy Lop); see the =fuzz-tests= rule in the Makefile.
+
 Binary serialization writes to and reads from a =std::streambuf=, which may be a string (=std::stringbuf=), file, stdin/stdout (=*std::cin.rdbuf()=, =*std::cout.rdbuf()=), or a custom streambuf derived class. To read from a block of memory without allocating a =std::stringbuf=:
 
 #+begin_src cpp
