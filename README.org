@@ -26,16 +26,20 @@ git submodule update --init
 
 * Usage
 
-To use any of the visitors, construct one, then call the visit function. The error handling differs for each type of visitor. For example:
+To use any of the visitors, construct one, then call the visit function. The API varies by visitor type. Binary serialization uses a =std::streambuf= and reports no errors; binary deserialization also uses a =std::streambuf= and reports errors as a string:
 
 #+begin_src cpp
-traverse::BinarySerialize writer;
+std::stringbuf buf;
+traverse::BinarySerialize writer(buf);
 visit(writer, yourobject);
-// writer.out contains the serialized string
+// buf.str() contains the serialized string
 
-traverse::BinaryDeserialize reader(serialized_string);
+traverse::BinaryDeserialize reader(buf);
 visit(reader, yourobject)
 if (!reader.Errors().empty()) throw reader.Errors();
+if (buf.getc() != std::streambuf::traits_type::eof()) {
+    throw "not all bytes processed";
+}
 #+end_src
 
 To define traversal of a user-defined struct:
@@ -72,6 +76,15 @@ If there are structural errors during deserialization, the =errors= field will c
 Integers are encoded using Google's [[https://developers.google.com/protocol-buffers/docs/encoding][ZigZag format]] (from Google Protocol Buffers). It handles endian changes and also size changes. You can binary serialize a big endian int16 and binary deserialize into a little endian int32. You can't mix signed and unsigned ints.
 
 The deserialization code is intended to handle malformed data but the tests are not extensive enough for me to have high confidence in this yet.
+Binary serialization writes to and reads from a =std::streambuf=, which may be a string (=std::stringbuf=), file, stdin/stdout (=*std::cin.rdbuf()=, =*std::cout.rdbuf()=), or a custom streambuf derived class. To read from a block of memory without allocating a =std::stringbuf=:
+
+#+begin_src cpp
+struct memorybuf : public std::streambuf {
+    memorybuf(char* begin, char* end) {
+        setg(begin, begin, end);
+    }
+};
+#+end_src
 
 ** JSON serialization using picojson
 

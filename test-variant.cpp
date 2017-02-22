@@ -73,11 +73,12 @@ void test_serialization() {
 
   // Test a round trip; make sure it comes back the same
   {
-    traverse::BinarySerialize serialize;
+    std::stringbuf buf;
+    traverse::BinarySerialize serialize(buf);
     visit(serialize, queue);
 
     MessageQueue another_queue;
-    traverse::BinaryDeserialize deserialize(serialize.out.str());
+    traverse::BinaryDeserialize deserialize(buf);
     visit(deserialize, another_queue);
 
     std::stringstream before, after;
@@ -90,18 +91,20 @@ void test_serialization() {
   // Test corrupting the data
   {
     Message m;
-    traverse::BinarySerialize serialize;
-    serialize.out.str().clear();
+    std::stringbuf buf;
+    traverse::BinarySerialize serialize(buf);
     visit(serialize, m1);
   
-    std::string msg = serialize.out.str();
+    std::string msg = buf.str();
     msg[0] = 0;  // this will make it pick the wrong variant
-    traverse::BinaryDeserialize wrong_variant(msg);
+    std::stringbuf corrupted_buf1(msg);
+    traverse::BinaryDeserialize wrong_variant(corrupted_buf1);
     visit(wrong_variant, m);
     TEST_EQ(wrong_variant.Errors().size() != 0, true);
 
     msg[0] = -5;  // this does not correspond to any valid variant
-    traverse::BinaryDeserialize invalid_type(msg);
+    std::stringbuf corrupted_buf2(msg);
+    traverse::BinaryDeserialize invalid_type(corrupted_buf2);
     visit(invalid_type, m);
     TEST_EQ(wrong_variant.Errors().size() != 0, true);
   }

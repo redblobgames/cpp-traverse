@@ -181,7 +181,7 @@ namespace traverse {
 
 namespace traverse {
   
-  inline void write_unsigned_int(std::stringbuf& out, uint64_t value) {
+  inline void write_unsigned_int(std::streambuf& out, uint64_t value) {
     do {
       uint8_t c = value & 0x7f;
       value >>= 7;
@@ -190,7 +190,7 @@ namespace traverse {
     } while(value);
   }
 
-  inline bool read_unsigned_int(std::stringbuf& in, uint64_t& value) {
+  inline bool read_unsigned_int(std::streambuf& in, uint64_t& value) {
     uint64_t result = 0;
     for (int byte = 0; ; ++byte) {
       int c = in.sbumpc();
@@ -207,14 +207,14 @@ namespace traverse {
     return true;
   }
 
-  inline void write_signed_int(std::stringbuf& out, int64_t value) {
+  inline void write_signed_int(std::streambuf& out, int64_t value) {
     write_unsigned_int(out,
                        (value < 0)
                        ? (((-value-1) << 1) | 1)
                        : (value << 1));
   }
 
-  inline bool read_signed_int(std::stringbuf& in, int64_t& value) {
+  inline bool read_signed_int(std::streambuf& in, int64_t& value) {
     uint64_t decoded = 0;
     bool status = read_unsigned_int(in, decoded);
     if (decoded & 1) {
@@ -228,15 +228,15 @@ namespace traverse {
 }
 
 /* The binary serialize/deserialize uses a binary format and
- * stringbufs. Check deserializer.Errors() to see if anything went
+ * streambufs. Check deserializer.Errors() to see if anything went
  * wrong. It will be empty on success.
  */
 
 namespace traverse {
 
   struct BinarySerialize {
-    std::stringbuf out;
-    BinarySerialize(): out(std::ios_base::out) {}
+    std::streambuf& out;
+    BinarySerialize(std::streambuf& out_): out(out_) {}
   };
 
   template<typename T> inline
@@ -275,17 +275,10 @@ namespace traverse {
 
 
   struct BinaryDeserialize {
-    std::stringbuf in;
+    std::streambuf& in;
     std::stringstream errors;
-    BinaryDeserialize(const std::string& str): in(str, std::ios_base::in) {}
-    BinaryDeserialize(const char* buf, size_t len): in(std::string(buf, len), std::ios_base::in) {}
-    std::string Errors() {
-      if (in.in_avail() != 0) {
-        errors << "Error: " << in.in_avail() << " extra bytes in message" << std::endl;
-        in.pubseekoff(0, std::ios_base::end); // so we don't write error again
-      }
-      return errors.str();
-    }
+    BinaryDeserialize(std::streambuf& buf): in(buf) {}
+    std::string Errors() { return errors.str(); }
   };
  
   template<typename T> inline
@@ -293,7 +286,7 @@ namespace traverse {
   visit(BinaryDeserialize& reader, T& value) {
     uint64_t wide_value;
     if (!read_unsigned_int(reader.in, wide_value)) {
-      reader.errors << "Error: not enough data in buffer to read number" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read number\n";
     }
     value = T(wide_value);
   }
@@ -303,7 +296,7 @@ namespace traverse {
   visit(BinaryDeserialize& reader, T& value) {
     int64_t wide_value;
     if (!read_signed_int(reader.in, wide_value)) {
-      reader.errors << "Error: not enough data in buffer to read number" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read number\n";
     }
     value = T(wide_value);
   }
@@ -319,32 +312,52 @@ namespace traverse {
   inline void visit(BinaryDeserialize& reader, std::string& string) {
     uint64_t size = 0;
     if (!read_unsigned_int(reader.in, size)) {
-      reader.errors << "Error: not enough data in buffer to read string size" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read string size\n";
       return;
     }
-    if (uint64_t(reader.in.in_avail()) < size) {
-      reader.errors << "Error: not enough data in buffer to deserialize string" << std::endl;
-      return;
+
+    /* Copy blocks out of the input stream into the output string.
+     * 
+     * It would be simpler to resize the string to 'size' and read all
+     * of it at once with sgetn(). However 'size' is untrusted input
+     * and there may not actually be 'size' bytes available in the
+     * stream.
+     */
+    const size_t buffersize = 1024;
+    char buffer[buffersize];
+    string.resize(0);
+    size_t bytes_remaining = size;
+    while (bytes_remaining > 0
+           && reader.in.sgetc() != std::streambuf::traits_type::eof()) {
+      size_t bytes_to_read = std::min(bytes_remaining, buffersize);
+      size_t bytes_actually_read = reader.in.sgetn(buffer, bytes_to_read);
+      string.append(buffer, buffer + bytes_actually_read);
+      if (bytes_actually_read < bytes_to_read) {
+        reader.errors << "Error: expected " << size
+                      << " bytes in string but only found "
+                      << (string.size() + bytes_actually_read) << "\n";
+        return;
+      }
+      bytes_remaining -= bytes_actually_read;
     }
-    string.resize(size);
-    reader.in.sgetn(&string[0], size);
   }
   
   template<typename Element>
   void visit(BinaryDeserialize& reader, std::vector<Element>& vector) {
     uint64_t i = 0, size = 0;
     if (!read_unsigned_int(reader.in, size)) {
-      reader.errors << "Error: not enough data in buffer to read vector size" << std::endl;
+      reader.errors << "Error: not enough data in buffer to read vector size\n";
       return;
     }
     vector.clear();
-    for (; i < size && reader.in.in_avail() > 0; ++i) {
-      Element element;
-      visit(reader, element);
-      vector.push_back(std::move(element));
+    for (; i < size && reader.in.sgetc() != std::streambuf::traits_type::eof(); ++i) {
+      vector.emplace_back();
+      visit(reader, vector.back());
     }
     if (i != size) {
-      reader.errors << "Error: expected " << size << " elements in vector but only found " << i << std::endl;
+      reader.errors << "Error: expected " << size
+                    << " elements in vector but only found "
+                    << i << "\n";
     }
   }
 }

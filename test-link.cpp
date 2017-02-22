@@ -14,11 +14,12 @@ void test_linkage() {
   Point q;
   
   traverse::CoutWriter writer1;
-  traverse::BinarySerialize writer2;
+  std::stringbuf buf;
+  traverse::BinarySerialize writer2(buf);
 
   visit(writer1, p);
   visit(writer2, p);
 
-  traverse::BinaryDeserialize reader2{writer2.out.str()};
+  traverse::BinaryDeserialize reader2(buf);
   visit(reader2, q);
 }
