@@ -14,7 +14,7 @@ Since there are many different data structures (/nouns/) and many different oper
 | GUI output         |      |        |        |        |         |         |     |
 | ...                |      |        |        |        |         |         |     |
 
-Two-axis extension can leave "holes" in the matrix. For example, if you add a new extension for Lua that handles enum, number, string, vector, and structs, and you also add a new extension for std::multiset that handles debug output, binary serialize, binary deserialize, and gui output, there's no code to handle the /combination/ of Lua and multiset. The library doesn't have a way to automatically fill those holes, but is designed to be "open" so that the end user can add a handle for any missing combinations.
+Two-axis extension can leave "holes" in the matrix. For example, if you add a new extension for Lua that handles enum, number, string, vector, and structs, and you also add a new extension for std::multiset that handles debug output, binary serialize, binary deserialize, and gui output, there's no code to handle the /combination/ of Lua and multiset. The library doesn't have a way to automatically fill those holes, but is designed to be "open" so that the end user can add a handle for any missing combinations. See [[file:traverse-picojson-variant.h][traverse-picojson-variant.h]] for an example of filling a hole (picojson extension + variant extension).
 
 * Installation
 
@@ -177,7 +177,7 @@ I have also included a Lua-to-string function =lua_repr= and a string-to-Lua fun
 
 ** Other visitors
 
-The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in [[file:traverse.h]], [[file:traverse-picojson.h]], file:traverse-rapidjson.h [[file:traverse-lua.h]] to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
+The intent of this library is to define data structure traversal separately from the serialization format, so you can write a visitor class to interface to Protocol Buffers, Thrift, Capn Proto, Flatbuffer, MsgPack, XML, YAML, or one of many other formats.  Although serialization is the primary use case, I've also used this library to visit the fields of data structures so that I can construct a debug GUI with the [[https://github.com/ocornut/imgui][dear imgui]] library; I haven't included that code here. Look at the existing visitors in [[file:traverse.h]], [[file:traverse-picojson.h]], [[file:traverse-rapidjson.h]] [[file:traverse-lua.h]] to see how to write a new visitor. You'll have to define how the visitor works with each data type (numbers, strings, vectors, structs).
 
 * Data types
 
@@ -199,9 +199,20 @@ One of the downsides of two-axis extension is that there can be "holes" in the c
 
 ** Other data types
 
-You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at [[file:traverse.h]] to see how string and vector work, or [[file:traverse-variant.h]] to see how that data type extension works.
+You'll have to define how the data type works with each of the visitors that you want to use (binary serialize, binary deserialize, etc.). Look at [[file:traverse.h]] to see how string and vector work, or [[file:traverse-variant.h]] to see how data type extension works.
 
 I didn't need float/double binary serialization for my project so I didn't implement them, but the JSON and Lua extensions do handle floats/doubles.
+
+You can override the visitor for a specific type. For example, consider this data structure:
+
+#+begin_src cpp
+struct Message {
+  enum {A, B, C, D} x;
+  enum {P, Q, R, S} y;
+};
+#+end_src
+
+The binary serialization will encode =x= and =y= to 1 byte each, for a total of 2 bytes. A more efficient encoding would use 2 bits for each, and could fit both into a total of 1 byte. You can define your own encoding for =Message= by defining =template<> void traverse::visit(BinarySerialize& writer, const Message& m)= and =template<> void traverse::visit(BinaryDeserialize& reader, Message& m)=.
 
 * Libraries
 
