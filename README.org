@@ -2,6 +2,15 @@
 
 When using some serialization libraries I have to write code to traverse my data structures and then put each of my struct's fields into the format the serialization library wants, and then I have to do this again in reverse. I have to write this traversal code again when converting to JSON or Lua. I have to write it again when writing a debug GUI that lets me see all the values. I wanted to reduce the boilerplate.
 
+1. *I wanted it to be easy* to turn a struct into a serializable struct, ideally just one line of code per struct.
+1. I didn't want to introduce new build steps or external tools.
+1. I wanted to be able to serialize existing structs /without/ modifying their definitions.
+1. I wanted to add support for containers (vector, set, variant, etc.) /without/ modifying this library.
+1. I wanted to add support for formats (binary, JSON, Lua, etc.), /without/ modifying this library.
+1. I did /not/ need it to work for arbitrary data structures.
+
+* Design
+
 This isn't a general purpose library. I created it primarily for my own use. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, enums, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
 
 Since there are many different data structures (/nouns/) and many different operations we want to do to them (/verbs/), there are two axes for extension:
