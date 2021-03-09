@@ -9,6 +9,8 @@ When using some serialization libraries I have to write code to traverse my data
 1. I wanted to add support for formats (binary, JSON, Lua, etc.), /without/ modifying this library.
 1. I did /not/ need it to work for arbitrary data structures.
 
+The result is a C++17 header-only serialization library.
+
 * Design
 
 This isn't a general purpose library. I created it primarily for my own use. I plan to use it for (copyable, assignable, default constructible) structs with public fields, numbers, enums, std::string, and std::vector. For these data structures, the library defines a generic traversal routine that recursively visits each element, calling a serialization/deserialization function for each.
@@ -192,7 +194,7 @@ The intent of this library is to define data structure traversal separately from
 
 As described in the Motivation section, I want to be able to extend the set of visitors or the set of data types. Each of the included visitors supports signed/unsigned integers, enum, class enum, std::string, std::vector, and user-defined structs. 
 
-Use the =TRAVERSE_STRUCT= macro to define the visitor for a user-defined struct or class. For example: =TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))= will visit the =x= and =y= fields of the =Point= class. If the fields aren't public, you need to make the visitor a friend. Put =TRAVERSE_IS_FRIEND(MyUserType)= inside your class =MyUserType= to declare the friend functions.
+Use the =TRAVERSE_STRUCT= macro to define the visitor for a user-defined struct or class. For example: =TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))= will visit the =x= and =y= fields of the =Point= class.
 
 For binary serialization, structs are written by serializing each field. For JSON, structs are written as JSON objects. For Lua, structs are converted into Lua tables.
 

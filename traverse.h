@@ -95,13 +95,13 @@ namespace traverse {
   };
 
   template<typename T> inline
-  typename std::enable_if<std::is_arithmetic<T>::value, void>::type
+  std::enable_if_t<std::is_arithmetic_v<T>>
   visit(CoutWriter& writer, const T& value) {
     writer.out << value;
   }
 
   template<typename T> inline
-  typename std::enable_if<std::is_enum<T>::value, void>::type
+  std::enable_if_t<std::is_enum_v<T>>
   visit(CoutWriter& writer, const T& value) {
     writer.out << (long long)(value);
   }
@@ -229,29 +229,30 @@ namespace traverse {
   };
 
   template<typename T> inline
-  typename std::enable_if<std::is_arithmetic<T>::value && !std::is_signed<T>::value, void>::type
+  std::enable_if_t<std::is_arithmetic_v<T> && !std::is_signed_v<T>>
   visit(BinarySerialize& writer, const T& value) {
     uint64_t wide_value = uint64_t(value);
     write_unsigned_int(writer.out, wide_value);
   }
 
   template<typename T> inline
-  typename std::enable_if<std::is_arithmetic<T>::value && std::is_signed<T>::value, void>::type
+  std::enable_if_t<std::is_arithmetic_v<T> && std::is_signed_v<T>>
   visit(BinarySerialize& writer, const T& value) {
     write_signed_int(writer.out, value);
   }
 
+  // Always treat char as unsigned
   inline void visit(BinarySerialize& writer, const char& value) {
-    visit(writer, (unsigned char)value);
+    visit(writer, static_cast<unsigned char>(value));
   }
   inline void visit(BinarySerialize& writer, const signed char& value) {
-    visit(writer, (unsigned char)value);
+    visit(writer, static_cast<unsigned char>(value));
   }
 
   template <typename T>
-  inline typename std::enable_if<std::is_enum<T>::value, void>::type
+  inline std::enable_if_t<std::is_enum_v<T>>
   visit(BinarySerialize& writer, const T& value) {
-    visit(writer, typename std::underlying_type<T>::type(value));
+    visit(writer, std::underlying_type_t<T>(value));
   }
   
   inline void visit(BinarySerialize& writer, const std::string& string) {
@@ -278,42 +279,43 @@ namespace traverse {
   };
  
   template<typename T> inline
-  typename std::enable_if<std::is_arithmetic<T>::value && !std::is_signed<T>::value, void>::type
+  std::enable_if_t<std::is_arithmetic_v<T> && !std::is_signed_v<T>>
   visit(BinaryDeserialize& reader, T& value) {
     uint64_t wide_value;
     if (!read_unsigned_int(reader.in, wide_value)) {
       reader.errors << "Error: not enough data in buffer to read number\n";
     }
-    value = T(wide_value);
+    value = static_cast<T>(wide_value);
   }
     
   template<typename T> inline
-  typename std::enable_if<std::is_arithmetic<T>::value && std::is_signed<T>::value, void>::type
+  std::enable_if_t<std::is_arithmetic_v<T> && std::is_signed_v<T>>
   visit(BinaryDeserialize& reader, T& value) {
     int64_t wide_value;
     if (!read_signed_int(reader.in, wide_value)) {
       reader.errors << "Error: not enough data in buffer to read number\n";
     }
-    value = T(wide_value);
+    value = static_cast<T>(wide_value);
   }
 
+  // Always treat char as unsigned
   inline void visit(BinaryDeserialize& reader, char& value) {
     unsigned char u;
     visit(reader, u);
-    value = char(u);
+    value = static_cast<char>(u);
   }
   inline void visit(BinaryDeserialize& reader, signed char& value) {
     unsigned char u;
     visit(reader, u);
-    value = (signed char)(u);
+    value = static_cast<signed char>(u);
   }
 
   template<typename T> inline
-  typename std::enable_if<std::is_enum<T>::value, void>::type
+  std::enable_if_t<std::is_enum_v<T>>
   visit(BinaryDeserialize& reader, T& value) {
-    typename std::underlying_type<T>::type v;
+    std::underlying_type_t<T> v;
     visit(reader, v);
-    value = T(v);
+    value = static_cast<T>(v);
   }
 
   inline void visit(BinaryDeserialize& reader, std::string& string) {
