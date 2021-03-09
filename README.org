@@ -62,7 +62,7 @@ struct Point {
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 #+end_src
 
-If the fields aren't public, you will need to declare the visit functions as friends; see [[file:traverse.h]] for details.
+All serializable fields must be public.
 
 * Visitor types
 

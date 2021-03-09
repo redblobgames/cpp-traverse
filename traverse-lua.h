@@ -26,8 +26,10 @@
 #ifndef TRAVERSE_LUA_H
 #define TRAVERSE_LUA_H
 
+#include <algorithm>
+#include <lua.hpp>
+
 #include "traverse.h"
-#include "lua.hpp"
 
 namespace traverse {
 

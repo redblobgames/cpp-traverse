@@ -30,28 +30,22 @@ struct Point {
 };
 TRAVERSE_STRUCT(Point, FIELD(x) FIELD(y))
 
-// Structures with private fields (accessed with friend declarations)
-struct LineSegment {
-  LineSegment(Point a_, Point b_): a(a_), b(b_) {}
-private:
-  Point a, b;
-  TRAVERSE_IS_FRIEND(LineSegment)
-};
-TRAVERSE_STRUCT(LineSegment, FIELD(a) FIELD(b))
 
-// C and C++ enums
+// C and C++ enums, including char to test the signed/unsigned encoding
 enum Color { RED, BLUE };
 enum class Mood : unsigned int { HAPPY, SAD, HULK_SMASH };
 enum class Signed : int { NEGATIVE = -1, ZERO, ONE };
+enum class Charred : char { START, END };
 
 // Nested structure with enums, strings, vectors
 struct Polygon {
   Color color;
   Mood mood;
+  Charred charred;
   std::string name;
   std::vector<Point> points;
 };
-TRAVERSE_STRUCT(Polygon, FIELD(color) FIELD(mood) FIELD(name) FIELD(points))
+TRAVERSE_STRUCT(Polygon, FIELD(color) FIELD(mood) FIELD(charred) FIELD(name) FIELD(points))
 
 
 

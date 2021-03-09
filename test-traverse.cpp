@@ -20,9 +20,25 @@ std::string to_bytes(const T& obj) {
   return out.str();
 }
 
+// char is allowed to be signed or unsigned; test that
+// traverse encodes them the same way.
+template<typename CharIn, typename CharOut> void test_char_compatibility() {
+  CharIn in = '@';
+  CharOut out;
+  std::stringbuf buf;
+  traverse::BinarySerialize serialize(buf);
+  traverse::BinaryDeserialize deserialize(buf);
+  
+  visit(serialize, in);
+  visit(deserialize, out);
+  TEST_EQ(int(in), int(out));
+}
+
 
 void test_int() {
-  TEST_EQ(to_bytes('@'), "128 1 ");
+  TEST_EQ(to_bytes('@'), "64 ");
+  TEST_EQ(to_bytes((unsigned char)'@'), "64 ");
+  TEST_EQ(to_bytes((signed char)'@'), "64 ");
   TEST_EQ(to_bytes(int(0)), "0 ");
   TEST_EQ(to_bytes(int(-1)), "1 ");
   TEST_EQ(to_bytes(int(1)), "2 ");
@@ -40,17 +56,23 @@ void test_enum() {
 
   
 int main() {
+  test_char_compatibility<char, signed char>();
+  test_char_compatibility<char, unsigned char>();
+  test_char_compatibility<unsigned char, char>();
+  test_char_compatibility<unsigned char, signed char>();
+  test_char_compatibility<signed char, char>();
+  test_char_compatibility<signed char, unsigned char>();
   test_int();
   test_enum();
     
   traverse::CoutWriter writer;
-  const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
+  const Polygon polygon = {BLUE, Mood::HULK_SMASH, Charred::END, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
 
   std::cout << "__ Basic CoutWriter __" << std::endl;
   {
     std::stringstream out;
     out << polygon;
-    TEST_EQ(out.str(), "Polygon{color:1, mood:2, name:\"UFO\\\"1942\\\"\", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:5, y:7}]}");
+    TEST_EQ(out.str(), "Polygon{color:1, mood:2, charred:1, name:\"UFO\\\"1942\\\"\", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:5, y:7}]}");
   }
 
   std::stringbuf buf;
@@ -59,7 +81,7 @@ int main() {
 
   {
     std::cout << "__ Serialize to bytes __ " << std::endl;
-    TEST_EQ(to_bytes(polygon), "1 2 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
+    TEST_EQ(to_bytes(polygon), "1 2 1 9 85 70 79 34 49 57 52 50 34 3 6 10 8 12 10 14 ");
 
     std::cout << "__ Deserialize from bytes __ " << std::endl;
     std::stringstream out1, out2;

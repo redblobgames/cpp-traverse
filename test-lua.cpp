@@ -32,8 +32,8 @@ void writer_unit_tests() {
   lua_pop(L, 1);
 
   // Structs, enums, enum classes, strings with quotes, vectors
-  visit(writer, Polygon{BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}});
-  TEST_EQ(lua_repr(L, -1), "{color = 1, mood = 2, name = \"UFO\\\"1942\\\"\", points = {{x = 3, y = 5}, {x = 4, y = 6}, {x = 5, y = 7}}}");
+  visit(writer, Polygon{BLUE, Mood::HULK_SMASH, Charred::END, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}});
+  TEST_EQ(lua_repr(L, -1), "{charred = 1, color = 1, mood = 2, name = \"UFO\\\"1942\\\"\", points = {{x = 3, y = 5}, {x = 4, y = 6}, {x = 5, y = 7}}}");
   lua_pop(L, 1);
 
   // Each test should leave the stack alone
@@ -69,8 +69,8 @@ void reader_unit_tests() {
 
   // Structs, enums, enum classes, strings with quotes, vectors
   Polygon p1;
-  const Polygon p2 = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
-  lua_eval(L, "{color = 1, mood = 2, name = \"UFO\\\"1942\\\"\", points = {{x = 3, y = 5}, {x = 4, y = 6}, {x = 5, y = 7}}}");
+  const Polygon p2 = {BLUE, Mood::HULK_SMASH, Charred::END, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
+  lua_eval(L, "{charred = 1, color = 1, mood = 2, name = \"UFO\\\"1942\\\"\", points = {{x = 3, y = 5}, {x = 4, y = 6}, {x = 5, y = 7}}}");
   visit(reader, p1);
   std::stringstream s1, s2;
   s1 << p1; s2 << p2;

@@ -1,7 +1,7 @@
 TESTOUTPUT=/tmp/test-traverse
 WARNINGS=-Wall -Wextra -pedantic -Wpointer-arith -Wshadow -Wfloat-conversion -Wno-unused-function -Wno-unused-parameter
-CXXFLAGS=-g -std=c++14 $(WARNINGS)
-TEST=$(CXX) $(CXXFLAGS) -o $(TESTOUTPUT)
+CXXFLAGS=-g -std=c++14 $(shell pkg-config --cflags lua) $(WARNINGS)
+TEST=$(CXX) $(CXXFLAGS) -o $(TESTOUTPUT) $(shell pkg-config --libs lua)
 
 all: tests
 

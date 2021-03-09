@@ -56,17 +56,7 @@ namespace traverse {
    * specialize this as needed to keep local fields or do work in the
    * constructor and destructor.
    *
-   * If some fields aren't public, put this inside your class:
-   * 
-   *     TRAVERSE_IS_FRIEND(MyUserType)
-   *
-   * That macro turns into
-   * 
-   *     template <typename V>
-   *        friend void traverse::visit(V&, MyUserType&);
-   *     template <typename V>
-   *        friend void traverse::visit(V&, const MyUserType&);
-   *
+   * All serializable fields must be public.
    */
   
   template<typename Visitor>
@@ -94,7 +84,6 @@ namespace traverse {
 
 #define TRAVERSE_STRUCT(TYPE, FIELDS) namespace traverse { template<typename Visitor> void visit(Visitor& visitor, TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } template<typename Visitor> void visit(Visitor& visitor, const TYPE& obj) { visit_struct(#TYPE, visitor) FIELDS ; } } inline std::ostream& operator << (std::ostream& out, const TYPE& obj) { traverse::CoutWriter writer(out); visit(writer, obj); return out; }
 #define FIELD(NAME) .field(#NAME, obj.NAME)
-#define TRAVERSE_IS_FRIEND(TYPE) template <typename V> friend void traverse::visit(V&, TYPE&); template <typename V> friend void traverse::visit(V&, const TYPE&);
 
 
 /* The CoutWriter just writes everything to std::cout */
@@ -252,6 +241,13 @@ namespace traverse {
     write_signed_int(writer.out, value);
   }
 
+  inline void visit(BinarySerialize& writer, const char& value) {
+    visit(writer, (unsigned char)value);
+  }
+  inline void visit(BinarySerialize& writer, const signed char& value) {
+    visit(writer, (unsigned char)value);
+  }
+
   template <typename T>
   inline typename std::enable_if<std::is_enum<T>::value, void>::type
   visit(BinarySerialize& writer, const T& value) {
@@ -299,6 +295,17 @@ namespace traverse {
       reader.errors << "Error: not enough data in buffer to read number\n";
     }
     value = T(wide_value);
+  }
+
+  inline void visit(BinaryDeserialize& reader, char& value) {
+    unsigned char u;
+    visit(reader, u);
+    value = char(u);
+  }
+  inline void visit(BinaryDeserialize& reader, signed char& value) {
+    unsigned char u;
+    visit(reader, u);
+    value = (signed char)(u);
   }
 
   template<typename T> inline

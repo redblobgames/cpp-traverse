@@ -108,15 +108,14 @@ int main() {
   test_ints();
   test_doubles();
   
-  const LineSegment s{{1, 7}, {13, 19}};
-  const Polygon polygon = {BLUE, Mood::HULK_SMASH, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
+  const Polygon polygon = {BLUE, Mood::HULK_SMASH, Charred::END, "UFO\"1942\"", {{3, 5}, {4, 6}, {5, 7}}};
   
   {
     std::cout << "__ Serialize object to JSON __\n";
     rapidjson::StringBuffer json;
     traverse::RapidJsonWriter jsonwriter{json};
     visit(jsonwriter, polygon);
-    TEST_EQ(string(json.GetString()), string("{\"color\":1,\"mood\":2,\"name\":\"UFO\\\"1942\\\"\",\"points\":[{\"x\":3,\"y\":5},{\"x\":4,\"y\":6},{\"x\":5,\"y\":7}]}"));
+    TEST_EQ(string(json.GetString()), string("{\"color\":1,\"mood\":2,\"charred\":1,\"name\":\"UFO\\\"1942\\\"\",\"points\":[{\"x\":3,\"y\":5},{\"x\":4,\"y\":6},{\"x\":5,\"y\":7}]}"));
   }
 
   // Intentionally make the JSON mismatch the C++ data structure, to make sure it flags warnings.
@@ -129,7 +128,7 @@ int main() {
     std::cout << "__ Deserialize JSON to Polygon __\n";
     std::stringstream errors;
     traverse::RapidJsonReader jsonreader{json2, errors};
-    Polygon polygon2;
+    Polygon polygon2{}; // default values
     visit(jsonreader, polygon2);
 
     // The resulting polygon should have the x and y fields set even
@@ -137,7 +136,7 @@ int main() {
     // the non-empty errors string.
     std::stringstream out;
     out << polygon2;
-    TEST_EQ(out.str(), "Polygon{color:0, mood:0, name:\"\", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:0, y:7}, Point{x:0, y:0}]}");
+    TEST_EQ(out.str(), "Polygon{color:0, mood:0, charred:0, name:\"\", points:[Point{x:3, y:5}, Point{x:4, y:6}, Point{x:0, y:7}, Point{x:0, y:0}]}");
     TEST_EQ(errors.str().substr(0, 7), "Warning");
   }
 }
