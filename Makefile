@@ -1,6 +1,8 @@
 TESTOUTPUT=/tmp/test-traverse
 WARNINGS=-Wall -Wextra -pedantic -Wpointer-arith -Wshadow -Wfloat-conversion -Wno-unused-function -Wno-unused-parameter
-CXXFLAGS=-g -std=c++17 $(shell pkg-config --cflags lua) $(WARNINGS)
+# SANITIZE=-fsanitize=address
+# SANITIZE=-fsanitize=undefined
+CXXFLAGS=-g -std=c++17 $(shell pkg-config --cflags lua) $(WARNINGS) $(SANITIZE)
 TEST=$(CXX) $(CXXFLAGS) -o $(TESTOUTPUT) $(shell pkg-config --libs lua)
 
 all: tests
@@ -18,7 +20,7 @@ tests:
 fuzz-tests: build/fuzz-test
 	mkdir -p fuzz-input fuzz-output
 	$(TEST) fuzz-gen.cpp && $(TESTOUTPUT)
-	afl-fuzz -m 5 -i fuzz-input -o fuzz-output build/fuzz-test
+	afl-fuzz -m 20 -i fuzz-input -o fuzz-output build/fuzz-test
 
 # Check all potential hangs reported by AFL to see if they're false alarms
 run-fuzz-hangs:

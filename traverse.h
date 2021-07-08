@@ -199,7 +199,7 @@ namespace traverse {
   inline void write_signed_int(std::streambuf& out, int64_t value) {
     write_unsigned_int(out,
                        (value < 0)
-                       ? (((-value-1) << 1) | 1)
+                       ? ((uint64_t(-(value+1)) << 1) | 1)
                        : (value << 1));
   }
 
@@ -207,7 +207,7 @@ namespace traverse {
     uint64_t decoded = 0;
     bool status = read_unsigned_int(in, decoded);
     if (decoded & 1) {
-      value = -(decoded >> 1)-1;
+      value = -int64_t(decoded >> 1)-1;
     } else {
       value = decoded >> 1;
     }
