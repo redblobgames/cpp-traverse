@@ -17,18 +17,15 @@ tests:
 	$(TEST) test-lua.cpp -l lua				&& $(TESTOUTPUT) >/dev/null
 
 # Run fuzz tests using AFL
-fuzz-tests: build/fuzz-test
-	mkdir -p fuzz-input fuzz-output
+fuzz-tests: /tmp/fuzz-test
+	mkdir -p /tmp/fuzz-input /tmp/fuzz-output
 	$(TEST) fuzz-gen.cpp && $(TESTOUTPUT)
-	afl-fuzz -m 20 -i fuzz-input -o fuzz-output build/fuzz-test
+	AFL_ALLOW_TMP=1 afl-cmin -i /tmp/fuzz-input -o /tmp/fuzz-input-min -- /tmp/fuzz-test
+	afl-fuzz -m 20 -i /tmp/fuzz-input-min -o /tmp/fuzz-output /tmp/fuzz-test
 
 # Check all potential hangs reported by AFL to see if they're false alarms
-run-fuzz-hangs:
-	for hang in fuzz-output/hangs/*; do ( ulimit -Sv 1000000; build/fuzz-test < $$hang ) done
+run-fuzz-hangs: /tmp/fuzz-test
+	for hang in /tmp/fuzz-output/hangs/*; do ( ulimit -Sv 1000000; /tmp/fuzz-test < $$hang ) done
 
-build/fuzz-test: fuzz-test.cpp $(wildcard *.h) Makefile
-	mkdir -p build
-	AFL_HARDEN=1 afl-clang++ $(CXXFLAGS) fuzz-test.cpp -o build/fuzz-test
-
-clean:
-	rm -rf build fuzz-input fuzz-output
+/tmp/fuzz-test: fuzz-test.cpp $(wildcard *.h) Makefile
+	AFL_HARDEN=1 afl-clang++ $(CXXFLAGS) fuzz-test.cpp -o $@

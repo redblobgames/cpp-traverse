@@ -18,7 +18,7 @@ Polygon P;
 int FILENAME_COUNTER = 0;
 
 void save() {
-  std::ofstream f(std::string("fuzz-input/") + std::to_string(FILENAME_COUNTER));
+  std::ofstream f(std::string("/tmp/fuzz-input/") + std::to_string(FILENAME_COUNTER));
   ++FILENAME_COUNTER;
   traverse::BinarySerialize writer(*f.rdbuf());
   visit(writer, P);
