@@ -2,7 +2,7 @@ TESTOUTPUT=/tmp/test-traverse
 WARNINGS=-Wall -Wextra -pedantic -Wpointer-arith -Wshadow -Wfloat-conversion -Wno-unused-function -Wno-unused-parameter
 # SANITIZE=-fsanitize=address
 # SANITIZE=-fsanitize=undefined
-CXXFLAGS=-g -std=c++17 $(shell pkg-config --cflags lua) $(WARNINGS) $(SANITIZE)
+CXXFLAGS=-g $(shell cat compile_flags.txt) $(shell pkg-config --cflags lua) $(WARNINGS) $(SANITIZE)
 TEST=$(CXX) $(CXXFLAGS) -o $(TESTOUTPUT) $(shell pkg-config --libs lua)
 
 all: tests
