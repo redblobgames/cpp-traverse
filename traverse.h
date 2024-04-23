@@ -64,7 +64,7 @@ namespace traverse {
     const char* name;
     Visitor& visitor;
     template<typename T>
-    StructVisitor& field(const char* label, T& value) {
+    StructVisitor& field([[maybe_unused]] const char* label, T& value) {
       visit(visitor, value);
       return *this;
     }
