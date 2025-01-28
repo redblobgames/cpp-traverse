@@ -26,6 +26,7 @@
 #ifndef TRAVERSE_H
 #define TRAVERSE_H
 
+#include <cstdint>
 #include <iostream>
 #include <iomanip>
 #include <streambuf>
